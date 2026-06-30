@@ -112,6 +112,12 @@
             font-size: 1.1rem;
         }
 
+        .receiver-text {
+            font-size: 1rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
         .game-screen {
             display: none;
         }
@@ -216,6 +222,18 @@
             margin-bottom: 5px;
         }
 
+        .draw-controls {
+            display: none;
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .draw-controls.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
         .dice-container {
             display: flex;
             justify-content: space-around;
@@ -302,15 +320,11 @@
                 <span id="phaseIndicator">Fase: 1</span>
                 <span id="remDrawsIndicator">Pescate rimaste: 4</span>
             </div>
-            
-            <div class="turn-indicator" id="turnIndicator">È il turno di: Giocatore 1</div>
-            
+
             <div class="activity-card">
-                <div id="activityText">Clicca sotto per iniziare il match</div>
+                <div id="activityText">Clicca su "Pesca Attività" per iniziare il match</div>
                 <div id="historySublist" class="history-list" style="display:none;"></div>
             </div>
-
-            <button class="btn" id="drawBtn" onclick="drawActivity()">Pesca Attività</button>
         </div>
 
         <div id="coopScreen" class="game-screen">
@@ -362,8 +376,8 @@
             </div>
 
             <div class="coupon">
-                <strong>🎟️ Coupon di Consolazione (Sconfitto):</strong>
-                <p id="loserCouponText" style="font-size:0.95rem; margin-top:5px; color:var(--text-muted);">Valido per un massaggio riparatore a scelta.</p>
+                <strong>🎟️ Coupon di Consolazione:</strong>
+                <p id="loserCouponText" style="font-size:0.95rem; margin-top:5px; color:var(--text-muted);">Può essere estratto al seguente link: <a href="https://assessore81.github.io/couple_coupon/" target="_blank" style="color:var(--accent-color);">assessore81.github.io/couple_coupon</a></p>
             </div>
 
             <button class="btn" onclick="resetGame(true)">Gioca Ancora</button>
@@ -373,6 +387,12 @@
             <div class="timer-circle" id="timerDisplay">60</div>
             <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Tempo per l'attività!</div>
             <button class="btn btn-outline" id="startTimerBtn" onclick="startTimer()">Avvia Timer</button>
+            <button class="btn btn-danger" id="stopAlarmBtn" style="display:none; margin-top:15px;" onclick="stopAlarm()">🔕 Ferma Allarme</button>
+        </div>
+
+        <div id="drawControls" class="draw-controls active">
+            <div class="turn-indicator" id="turnIndicator">Turno di: Giocatore 1</div>
+            <button class="btn" id="drawBtn" onclick="drawActivity()">Pesca Attività</button>
         </div>
 
         <button class="btn btn-danger" id="globalResetBtn" onclick="confirmReset()">Azzera Gioco</button>
@@ -417,6 +437,7 @@
         };
 
         let timerInterval = null;
+        let alarmInterval = null;
 
         function updateNames() {
             gameState.names[1] = document.getElementById('p1Name').value || "Giocatore 1";
@@ -427,7 +448,7 @@
         }
 
         function updateTurnIndicator() {
-            document.getElementById('turnIndicator').textContent = `È il turno di: ${gameState.names[gameState.currentPlayer]}`;
+            document.getElementById('turnIndicator').textContent = `Turno di: ${gameState.names[gameState.currentPlayer]}`;
         }
 
         function drawActivity() {
@@ -449,7 +470,9 @@
                 document.getElementById('historySublist').style.display = 'block';
             }
 
-            document.getElementById('activityText').innerHTML = displayTxt;
+            let receiverName = gameState.names[gameState.currentPlayer];
+            document.getElementById('activityText').innerHTML =
+                `<div class="receiver-text">${receiverName} riceve:</div>` + displayTxt;
             showTimerGlobal();
 
             gameState.drawsLeft--;
@@ -475,6 +498,7 @@
 
         function resetTimerUI() {
             clearInterval(timerInterval);
+            stopAlarm();
             document.getElementById('timerDisplay').textContent = "60";
             document.getElementById('startTimerBtn').style.display = 'inline-block';
         }
@@ -495,8 +519,7 @@
             }, 1000);
         }
 
-        function triggerAlarm() {
-            if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500]);
+        function playAlarmSound() {
             try {
                 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 let oscillator = audioCtx.createOscillator();
@@ -521,6 +544,28 @@
             }
         }
 
+        function triggerAlarm() {
+            document.getElementById('stopAlarmBtn').style.display = 'inline-block';
+
+            const vibrateAndPlay = () => {
+                if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500]);
+                playAlarmSound();
+            };
+
+            vibrateAndPlay();
+            // Continua a vibrare/suonare finché l'utente non preme "Ferma Allarme"
+            alarmInterval = setInterval(vibrateAndPlay, 1500);
+        }
+
+        function stopAlarm() {
+            if (alarmInterval) {
+                clearInterval(alarmInterval);
+                alarmInterval = null;
+            }
+            if (navigator.vibrate) navigator.vibrate(0);
+            document.getElementById('stopAlarmBtn').style.display = 'none';
+        }
+
         function showCoopScreen() {
             resetTimerUI();
             switchScreen('coopScreen');
@@ -540,7 +585,7 @@
                 gameState.drawsLeft = 4;
                 document.getElementById('phaseIndicator').textContent = `Fase: ${gameState.phase}`;
                 document.getElementById('remDrawsIndicator').textContent = `Pescate rimaste: ${gameState.drawsLeft}`;
-                document.getElementById('activityText').textContent = `Fase ${gameState.phase} pronta. Clicca per pescare.`;
+                document.getElementById('activityText').textContent = `Fase ${gameState.phase} pronta. Clicca su "Pesca Attività".`;
                 document.getElementById('drawBtn').textContent = "Pesca Attività";
                 document.getElementById('drawBtn').setAttribute('onclick', 'drawActivity()');
                 switchScreen('drawScreen');
@@ -628,10 +673,8 @@
             if (gameState.scores[1] === 4 || gameState.scores[2] === 4) {
                 hideTimerGlobal();
                 let finalWinner = gameState.scores[1] === 4 ? 1 : 2;
-                let finalLoser = finalWinner === 1 ? 2 : 1;
                 
                 document.getElementById('winnerText').textContent = `Vince ${gameState.names[finalWinner]}!`;
-                document.getElementById('loserCouponText').textContent = `Valido per 1 desiderio che ${gameState.names[finalLoser]} dovrà esaudire a favore di ${gameState.names[finalWinner]} nei prossimi giorni.`;
                 
                 setTimeout(() => {
                     document.getElementById('globalResetBtn').style.display = 'none';
@@ -643,6 +686,13 @@
         function switchScreen(screenId) {
             document.querySelectorAll('.game-screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
+
+            const drawControls = document.getElementById('drawControls');
+            if (screenId === 'drawScreen') {
+                drawControls.classList.add('active');
+            } else {
+                drawControls.classList.remove('active');
+            }
         }
 
         function confirmReset() {
@@ -667,7 +717,7 @@
 
             document.getElementById('phaseIndicator').textContent = "Fase: 1";
             document.getElementById('remDrawsIndicator').textContent = "Pescate rimaste: 4";
-            document.getElementById('activityText').textContent = "Clicca sotto per iniziare il match";
+            document.getElementById('activityText').textContent = "Clicca su \"Pesca Attività\" per iniziare il match";
             document.getElementById('historySublist').style.display = 'none';
             document.getElementById('drawBtn').textContent = "Pesca Attività";
             document.getElementById('drawBtn').setAttribute('onclick', 'drawActivity()');
