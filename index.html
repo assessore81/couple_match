@@ -13,6 +13,7 @@
             --text-muted: #a08796;
             --danger-color: #9e2a2b;
             --success-color: #386641;
+            --bonus-color: #723c5a;
         }
 
         * {
@@ -54,7 +55,6 @@
             text-transform: uppercase;
         }
 
-        /* Setup Nomi */
         .players-setup {
             display: flex;
             justify-content: space-between;
@@ -95,7 +95,6 @@
             border-color: var(--accent-color);
         }
 
-        /* Info Stato */
         .status-bar {
             display: flex;
             justify-content: space-between;
@@ -113,7 +112,6 @@
             font-size: 1.1rem;
         }
 
-        /* Finestre di gioco */
         .game-screen {
             display: none;
         }
@@ -123,7 +121,6 @@
             animation: fadeIn 0.5s ease;
         }
 
-        /* Pulsanti */
         .btn {
             background: linear-gradient(135deg, #d4a373, #b58253);
             color: #120c10;
@@ -139,8 +136,20 @@
             box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3);
         }
 
-        .btn:active {
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn:active:not(:disabled) {
             transform: scale(0.98);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--accent-color);
+            border: 2px solid var(--accent-color);
         }
 
         .btn-danger {
@@ -154,7 +163,6 @@
             box-shadow: none;
         }
 
-        /* Display Attività */
         .activity-card {
             background: rgba(255,255,255,0.02);
             border: 1px dashed rgba(212, 163, 115, 0.3);
@@ -171,6 +179,12 @@
             flex-direction: column;
         }
 
+        .bonus-card {
+            background: rgba(114, 60, 90, 0.2);
+            border-color: var(--bonus-color);
+            color: #e5b3cb;
+        }
+
         .history-list {
             font-size: 0.85rem;
             color: var(--text-muted);
@@ -180,24 +194,28 @@
             background: rgba(0,0,0,0.2);
             padding: 10px;
             border-radius: 8px;
-            max-height: 120px;
+            max-height: 150px;
             overflow-y: auto;
         }
 
-        /* Timer */
-        .timer-container {
-            margin-top: 20px;
+        /* Timer Globale */
+        .global-timer-container {
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.05);
             display: none;
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 0.3s;
         }
 
         .timer-circle {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: bold;
             color: var(--accent-color);
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
 
-        /* Dadi */
         .dice-container {
             display: flex;
             justify-content: space-around;
@@ -238,7 +256,6 @@
             font-weight: bold;
         }
 
-        /* Animazioni */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -294,11 +311,6 @@
             </div>
 
             <button class="btn" id="drawBtn" onclick="drawActivity()">Pesca Attività</button>
-
-            <div class="timer-container" id="timerContainer">
-                <div class="timer-circle" id="timerDisplay">60</div>
-                <div style="font-size:0.8rem; color:var(--text-muted)">Tempo per l'attività!</div>
-            </div>
         </div>
 
         <div id="coopScreen" class="game-screen">
@@ -322,7 +334,7 @@
                 <div><span class="p2Label">G2</span>: <span id="p2Score">0</span>/4</div>
             </div>
 
-            <div class="activity-card">
+            <div class="activity-card" id="finalActivityCard">
                 <div id="finalActivityText">Lanciate i dadi per decretare chi farà il punto!</div>
             </div>
 
@@ -357,17 +369,29 @@
             <button class="btn" onclick="resetGame(true)">Gioca Ancora</button>
         </div>
 
+        <div id="globalTimer" class="global-timer-container">
+            <div class="timer-circle" id="timerDisplay">60</div>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Tempo per l'attività!</div>
+            <button class="btn btn-outline" id="startTimerBtn" onclick="startTimer()">Avvia Timer</button>
+        </div>
+
         <button class="btn btn-danger" id="globalResetBtn" onclick="confirmReset()">Azzera Gioco</button>
     </div>
 
     <script>
-        // Configurazione Attività
-        const phase1Pool = ["BACIA BOCCA", "PALPA SEDERE", "TOCCA SESSO SOPRA I VESTITI", "STRUSCIA IL SESSO SOPRA I VESTITI", "USA IL VIBRATORE SOPRA I VESTITI", "BACIA SESSO SOPRA I VESTITI"];
-        const phase2Pool = ["USA VIBRATORE SU SENO/TESTICOLI", "PALPA SENO/TESTICOLI", "MASTURBA CON LE MANI", "STIMOLA CAPEZZOLI/USA CAPEZZOLI SUL SESSO", "STRUSCIA GAMBA SU SESSO", "SCEGLI UNA DELLE PRECEDENTI"];
-        const phase3Pool = ["BACIA SESSO", "USA VIBRATORE", "STIMOLA CULETTO/MASTURBA CON I SENI", "MASTURBA CON LE MANI", "BACIA SENI/TESTICOLI", "SCEGLI UNA DELLE PRECEDENTI"];
+        // Array originali per la Scelta a Piacere
+        const origPools = {
+            1: ["BACIA BOCCA", "PALPA SEDERE", "TOCCA SESSO SOPRA I VESTITI", "STRUSCIA IL SESSO SOPRA I VESTITI", "USA IL VIBRATORE SOPRA I VESTITI", "BACIA SESSO SOPRA I VESTITI"],
+            2: ["USA VIBRATORE SU SENO/TESTICOLI", "PALPA SENO/TESTICOLI", "MASTURBA CON LE MANI", "STIMOLA CAPEZZOLI/USA CAPEZZOLI SUL SESSO", "STRUSCIA GAMBA SU SESSO"],
+            3: ["BACIA SESSO", "USA VIBRATORE", "STIMOLA CULETTO/MASTURBA CON I SENI", "MASTURBA CON LE MANI", "BACIA SENI/TESTICOLI"]
+        };
+
+        const phase1Pool = [...origPools[1]];
+        const phase2Pool = [...origPools[2], "SCELTA A PIACERE"];
+        const phase3Pool = [...origPools[3], "SCELTA A PIACERE"];
 
         const coopActivities = {
-            1: "BACIA CON LA LINGUA (Da adesso sarete completamente NUDI)",
+            1: "BACIA CON LA LINGUA<br><span style='font-size:0.9rem; color:var(--text-muted)'>(Da adesso sarete completamente NUDI)</span>",
             2: "TOCCARSI A VICENDA I GENITALI",
             3: "EFFETTUA LA POSIZIONE DEL 69"
         };
@@ -378,7 +402,6 @@
             "MASTURBA CON MANI E BOCCA"
         ];
 
-        // Stato del Gioco
         let gameState = {
             phase: 1,
             drawsLeft: 4,
@@ -388,19 +411,16 @@
                 2: [...phase2Pool],
                 3: [...phase3Pool]
             },
-            history: { 1: [], 2: [], 3: [] },
             scores: { 1: 0, 2: 0 },
-            names: { 1: "Giocatore 1", 2: "Giocatore 2" }
+            names: { 1: "Giocatore 1", 2: "Giocatore 2" },
+            bonusGiven: false
         };
 
         let timerInterval = null;
 
-        // Inizializzazione nomi
         function updateNames() {
             gameState.names[1] = document.getElementById('p1Name').value || "Giocatore 1";
             gameState.names[2] = document.getElementById('p2Name').value || "Giocatore 2";
-            
-            // Aggiorna le label ovunque
             document.querySelectorAll('.p1Label').forEach(el => el.textContent = gameState.names[1]);
             document.querySelectorAll('.p2Label').forEach(el => el.textContent = gameState.names[2]);
             updateTurnIndicator();
@@ -410,66 +430,60 @@
             document.getElementById('turnIndicator').textContent = `È il turno di: ${gameState.names[gameState.currentPlayer]}`;
         }
 
-        // Funzione Pesca
         function drawActivity() {
-            clearInterval(timerInterval);
-            document.getElementById('timerContainer').style.display = 'none';
-            document.getElementById('historySublist').style.display = 'none';
+            resetTimerUI();
 
             let currentPool = gameState.pools[gameState.phase];
             if (currentPool.length === 0) return;
 
             let randomIndex = Math.floor(Math.random() * currentPool.length);
             let selected = currentPool.splice(randomIndex, 1)[0];
-
             let displayTxt = selected;
 
-            // Gestione "Scegli una delle precedenti"
-            if (selected === "SCEGLI UNA DELLE PRECEDENTI") {
-                let pastActivities = gameState.history[gameState.phase];
-                if (pastActivities.length > 0) {
-                    displayTxt = "SCEGLI UNA DELLE PRECEDENTI:<br><span style='font-size:1rem; color:var(--accent-color)'>Seleziona tra quelle uscite:</span>";
-                    let historyHtml = "<ul>" + pastActivities.map(act => `<li>${act}</li>`).join('') + "</ul>";
-                    document.getElementById('historySublist').innerHTML = historyHtml;
-                    document.getElementById('historySublist').style.display = 'block';
-                } else {
-                    // Fallback se esce come prima pescata assoluta
-                    displayTxt = "SCEGLI UNA DELLE PRECEDENTI (Nessuna precedente trovata, rigira o inventa!)";
-                }
-            } else {
-                // Inserisci in cronologia solo se non è il comando speciale stesso
-                gameState.history[gameState.phase].push(selected);
+            document.getElementById('historySublist').style.display = 'none';
+
+            if (selected === "SCELTA A PIACERE") {
+                displayTxt = "SCELTA A PIACERE!<br><span style='font-size:1rem; color:var(--accent-color)'>Scegli tra tutte le attività di questa fase:</span>";
+                let historyHtml = "<ul>" + origPools[gameState.phase].map(act => `<li>${act}</li>`).join('') + "</ul>";
+                document.getElementById('historySublist').innerHTML = historyHtml;
+                document.getElementById('historySublist').style.display = 'block';
             }
 
             document.getElementById('activityText').innerHTML = displayTxt;
+            showTimerGlobal();
 
-            // Avanzamento turni e conteggi
             gameState.drawsLeft--;
             document.getElementById('remDrawsIndicator').textContent = `Pescate rimaste: ${gameState.drawsLeft}`;
-
-            // Cambio turno per la prossima pescata
             gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
             updateTurnIndicator();
 
-            // Avvia Timer 60s
-            startTimer();
-
-            // Se rimosse tutte e 4 le carte previste della fase
             if (gameState.drawsLeft === 0) {
                 document.getElementById('drawBtn').textContent = "Vedi Attività di Coppia";
                 document.getElementById('drawBtn').setAttribute('onclick', 'showCoopScreen()');
             }
         }
 
-        // Timer con suono nativo e vibrazione
+        // --- Logica Timer Globale ---
+        function showTimerGlobal() {
+            document.getElementById('globalTimer').style.display = 'flex';
+        }
+
+        function hideTimerGlobal() {
+            document.getElementById('globalTimer').style.display = 'none';
+            resetTimerUI();
+        }
+
+        function resetTimerUI() {
+            clearInterval(timerInterval);
+            document.getElementById('timerDisplay').textContent = "60";
+            document.getElementById('startTimerBtn').style.display = 'inline-block';
+        }
+
         function startTimer() {
+            document.getElementById('startTimerBtn').style.display = 'none';
             let timeLeft = 60;
             const display = document.getElementById('timerDisplay');
-            const container = document.getElementById('timerContainer');
             
-            display.textContent = timeLeft;
-            container.style.display = 'block';
-
             timerInterval = setInterval(() => {
                 timeLeft--;
                 display.textContent = timeLeft;
@@ -482,26 +496,17 @@
         }
 
         function triggerAlarm() {
-            // Vibrazione (se supportata dal telefono)
-            if (navigator.vibrate) {
-                navigator.vibrate([300, 100, 300, 100, 500]);
-            }
-            
-            // Suono tramite Web Audio API (evita file esterni mancanti)
+            if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500]);
             try {
                 let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 let oscillator = audioCtx.createOscillator();
                 let gainNode = audioCtx.createGain();
-
                 oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Nota La
+                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
                 gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
-                
                 oscillator.connect(gainNode);
                 gainNode.connect(audioCtx.destination);
-                
                 oscillator.start();
-                // Suona per 1.5 secondi con intermittenza simulata
                 setTimeout(() => { oscillator.stop(); }, 500);
                 setTimeout(() => {
                     let osc2 = audioCtx.createOscillator();
@@ -512,30 +517,26 @@
                     setTimeout(() => { osc2.stop(); }, 500);
                 }, 700);
             } catch (e) {
-                console.log("AudioContext non abilitato o bloccato dalle policy del browser.");
+                console.log("Audio non supportato.");
             }
         }
 
-        // Schermata di Mezzo (Attività in Comune)
         function showCoopScreen() {
-            clearInterval(timerInterval);
-            document.getElementById('timerContainer').style.display = 'none';
-            
+            resetTimerUI();
             switchScreen('coopScreen');
-            document.getElementById('coopActivityText').textContent = coopActivities[gameState.phase];
+            document.getElementById('coopActivityText').innerHTML = coopActivities[gameState.phase];
+            showTimerGlobal();
         }
 
-        // Passaggio alla fase successiva
         function nextPhase() {
+            hideTimerGlobal();
             gameState.phase++;
             
             if (gameState.phase > 3) {
-                // Vai alla fase finale dadi
-                document.getElementById('setupContainer').style.display = 'none'; // Nascondi setup nomi alla fine
+                document.getElementById('setupContainer').style.display = 'none';
                 switchScreen('finalScreen');
                 updateFinalActivityText();
             } else {
-                // Configura nuova fase di pescata
                 gameState.drawsLeft = 4;
                 document.getElementById('phaseIndicator').textContent = `Fase: ${gameState.phase}`;
                 document.getElementById('remDrawsIndicator').textContent = `Pescate rimaste: ${gameState.drawsLeft}`;
@@ -546,13 +547,17 @@
             }
         }
 
-        // Logica dadi fase finale
         function rollDice() {
+            resetTimerUI();
+            hideTimerGlobal();
+            
             const btn = document.getElementById('rollBtn');
             const d1 = document.getElementById('dice1');
             const d2 = document.getElementById('dice2');
+            const card = document.getElementById('finalActivityCard');
 
             btn.disabled = true;
+            card.classList.remove('bonus-card');
             d1.classList.add('rolling');
             d2.classList.add('rolling');
 
@@ -587,12 +592,31 @@
         function announceRoundWinner(winner) {
             let currentScore = gameState.scores[winner];
             let winnerName = gameState.names[winner];
+            let loser = winner === 1 ? 2 : 1;
+            let loserScore = gameState.scores[loser];
             
-            // Trova l'attività in sequenza (dal punto 1 al 3)
+            // Controllo Regola di Consolazione 3-0
+            if (currentScore === 3 && loserScore === 0 && !gameState.bonusGiven) {
+                gameState.bonusGiven = true;
+                let loserName = gameState.names[loser];
+                let bonusActivity = finalSequence[0]; // Punto 1
+                
+                document.getElementById('finalActivityCard').classList.add('bonus-card');
+                document.getElementById('finalActivityText').innerHTML = 
+                    `<strong>Punto per ${winnerName}, MA... 🚨 ATTENZIONE!</strong><br>` +
+                    `<span style="font-size:0.9rem">Siamo sul 3-0. ${loserName} riceve una consolazione immediata prima di proseguire!</span><br><br>` +
+                    `<strong>${loserName}, esegui:</strong><br>` +
+                    `<span style='color:#ffd700; font-size:1.4rem;'>${bonusActivity}</span>`;
+                
+                showTimerGlobal();
+                return; // Interrompe il normale annuncio del punto per mostrare la consolazione
+            }
+            
+            // Comportamento Standard
             let activity = finalSequence[currentScore - 1] || "Preparati al gran finale!";
-            
             if (currentScore <= 3) {
                 document.getElementById('finalActivityText').innerHTML = `<strong>Punto per ${winnerName}! 🎯</strong><br>Esegui l'attività del ${currentScore}° Punto:<br><span style='color:var(--accent-color); font-size:1.4rem;'>${activity}</span>`;
+                showTimerGlobal();
             }
         }
 
@@ -600,9 +624,9 @@
             document.getElementById('finalActivityText').innerHTML = "<strong>Inizia la sfida finale!</strong><br>Lanciate i dadi. Chi ottiene il punteggio più alto segna un punto ed esegue la sua attività in sequenza.";
         }
 
-        // Verifica Fine del Gioco
         function checkGameEnd() {
             if (gameState.scores[1] === 4 || gameState.scores[2] === 4) {
+                hideTimerGlobal();
                 let finalWinner = gameState.scores[1] === 4 ? 1 : 2;
                 let finalLoser = finalWinner === 1 ? 2 : 1;
                 
@@ -612,17 +636,15 @@
                 setTimeout(() => {
                     document.getElementById('globalResetBtn').style.display = 'none';
                     switchScreen('winnerScreen');
-                }, 1500);
+                }, 2000); // Leggero ritardo per far leggere l'ultimo punto
             }
         }
 
-        // Utility cambio schermata
         function switchScreen(screenId) {
             document.querySelectorAll('.game-screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
         }
 
-        // Reset Di Gioco con Conferma
         function confirmReset() {
             if (confirm("Sei sicuro di voler azzerare la partita in corso? Perderai tutti i progressi.")) {
                 resetGame(false);
@@ -630,7 +652,7 @@
         }
 
         function resetGame(forcePlayAgain = false) {
-            clearInterval(timerInterval);
+            hideTimerGlobal();
             
             gameState.phase = 1;
             gameState.drawsLeft = 4;
@@ -640,18 +662,17 @@
                 2: [...phase2Pool],
                 3: [...phase3Pool]
             };
-            gameState.history = { 1: [], 2: [], 3: [] };
             gameState.scores = { 1: 0, 2: 0 };
+            gameState.bonusGiven = false;
 
-            // Reset UI elementi
             document.getElementById('phaseIndicator').textContent = "Fase: 1";
             document.getElementById('remDrawsIndicator').textContent = "Pescate rimaste: 4";
             document.getElementById('activityText').textContent = "Clicca sotto per iniziare il match";
             document.getElementById('historySublist').style.display = 'none';
-            document.getElementById('timerContainer').style.display = 'none';
             document.getElementById('drawBtn').textContent = "Pesca Attività";
             document.getElementById('drawBtn').setAttribute('onclick', 'drawActivity()');
             
+            document.getElementById('finalActivityCard').classList.remove('bonus-card');
             document.getElementById('p1Score').textContent = "0";
             document.getElementById('p2Score').textContent = "0";
             document.getElementById('dice1').textContent = "?";
@@ -665,7 +686,6 @@
             switchScreen('drawScreen');
         }
 
-        // Avvio iniziale delle label nomi
         updateNames();
     </script>
 </body>
