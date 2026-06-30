@@ -158,6 +158,14 @@
             border: 2px solid var(--accent-color);
         }
 
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            width: auto;
+            margin: 4px;
+            display: inline-block;
+        }
+
         .btn-danger {
             background: transparent;
             color: var(--danger-color);
@@ -204,6 +212,56 @@
             overflow-y: auto;
         }
 
+        /* Sorteggio chi inizia */
+        .starter-draw-box {
+            background: rgba(212, 163, 115, 0.08);
+            border: 1px solid var(--accent-color);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .starter-draw-box .label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .starter-draw-box .winner-name {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #ffd700;
+            margin-top: 8px;
+            text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+            animation: pulseGlow 1.2s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* Bonus box */
+        .bonus-box {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            border: 1px solid var(--bonus-color);
+            background: rgba(114, 60, 90, 0.15);
+            color: #e5b3cb;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .bonus-box.no-bonus {
+            border-color: rgba(160, 135, 150, 0.3);
+            background: rgba(255,255,255,0.02);
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
         /* Timer Globale */
         .global-timer-container {
             margin-top: 25px;
@@ -220,6 +278,12 @@
             font-weight: bold;
             color: var(--accent-color);
             margin-bottom: 5px;
+        }
+
+        .timer-add-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
         }
 
         .draw-controls {
@@ -315,7 +379,16 @@
             </div>
         </div>
 
-        <div id="drawScreen" class="game-screen active">
+        <!-- Sorteggio di inizio fase -->
+        <div id="starterDrawScreen" class="game-screen">
+            <div class="starter-draw-box">
+                <div class="label">Sorteggio inizio fase <span id="starterPhaseLabel">1</span></div>
+                <div class="winner-name" id="starterWinnerName">...</div>
+            </div>
+            <button class="btn" id="confirmStarterBtn" onclick="confirmStarter()">Inizia la fase</button>
+        </div>
+
+        <div id="drawScreen" class="game-screen">
             <div class="status-bar">
                 <span id="phaseIndicator">Fase: 1</span>
                 <span id="remDrawsIndicator">Pescate rimaste: 4</span>
@@ -325,6 +398,7 @@
                 <div id="activityText">Clicca su "Pesca Attività" per iniziare il match</div>
                 <div id="historySublist" class="history-list" style="display:none;"></div>
             </div>
+            <div id="bonusBox" class="bonus-box" style="display:none;"></div>
         </div>
 
         <div id="coopScreen" class="game-screen">
@@ -363,7 +437,7 @@
                 </div>
             </div>
 
-            <button class="btn" id="rollBtn" onclick="rollDice()">Lancia i Dadi</button>
+            <button class="btn" id="rollBtn" onclick="rollDiceSequence()">Lancia i Dadi</button>
         </div>
 
         <div id="winnerScreen" class="game-screen">
@@ -386,11 +460,14 @@
         <div id="globalTimer" class="global-timer-container">
             <div class="timer-circle" id="timerDisplay">60</div>
             <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Tempo per l'attività!</div>
+            <div class="timer-add-controls" id="timerAddControls">
+                <button class="btn btn-outline btn-small" onclick="addTimerBlock()">+10 secondi</button>
+            </div>
             <button class="btn btn-outline" id="startTimerBtn" onclick="startTimer()">Avvia Timer</button>
             <button class="btn btn-danger" id="stopAlarmBtn" style="display:none; margin-top:15px;" onclick="stopAlarm()">🔕 Ferma Allarme</button>
         </div>
 
-        <div id="drawControls" class="draw-controls active">
+        <div id="drawControls" class="draw-controls">
             <div class="turn-indicator" id="turnIndicator">Turno di: Giocatore 1</div>
             <button class="btn" id="drawBtn" onclick="drawActivity()">Pesca Attività</button>
         </div>
@@ -422,6 +499,15 @@
             "MASTURBA CON MANI E BOCCA"
         ];
 
+        // Definizione dei bonus estraibili (30% di probabilità di ottenerne uno)
+        const bonusPool = [
+            { id: "plus10", label: "+10 secondi", type: "time", seconds: 10 },
+            { id: "plus20", label: "+20 secondi", type: "time", seconds: 20 },
+            { id: "kiss", label: "Aggiungi bacio", type: "choice", fallbackLabel: "+10 secondi", fallbackSeconds: 10 },
+            { id: "blindfold", label: "Ricevi attività da bendato", type: "choice", fallbackLabel: "+10 secondi", fallbackSeconds: 10 },
+            { id: "lube", label: "Aggiungi lubrificante", type: "choice", fallbackLabel: "+10 secondi", fallbackSeconds: 10 }
+        ];
+
         let gameState = {
             phase: 1,
             drawsLeft: 4,
@@ -438,6 +524,9 @@
 
         let timerInterval = null;
         let alarmInterval = null;
+        let timerBaseSeconds = 60;
+        let timerCurrentSeconds = 60;
+        let timerRunning = false;
 
         function updateNames() {
             gameState.names[1] = document.getElementById('p1Name').value || "Giocatore 1";
@@ -449,6 +538,61 @@
 
         function updateTurnIndicator() {
             document.getElementById('turnIndicator').textContent = `Turno di: ${gameState.names[gameState.currentPlayer]}`;
+        }
+
+        // --- Sorteggio chi inizia la fase ---
+        function startPhaseDraw() {
+            switchScreen('starterDrawScreen');
+            document.getElementById('starterPhaseLabel').textContent = gameState.phase;
+            const nameEl = document.getElementById('starterWinnerName');
+            const confirmBtn = document.getElementById('confirmStarterBtn');
+            confirmBtn.disabled = true;
+            nameEl.textContent = "Sorteggio in corso...";
+
+            // breve effetto suspance prima di rivelare chi inizia
+            let ticks = 0;
+            const shuffleInterval = setInterval(() => {
+                nameEl.textContent = Math.random() < 0.5 ? gameState.names[1] : gameState.names[2];
+                ticks++;
+                if (ticks > 8) {
+                    clearInterval(shuffleInterval);
+                    gameState.currentPlayer = Math.random() < 0.5 ? 1 : 2;
+                    nameEl.textContent = `${gameState.names[gameState.currentPlayer]} inizia! 🎲`;
+                    confirmBtn.disabled = false;
+                }
+            }, 150);
+        }
+
+        function confirmStarter() {
+            updateTurnIndicator();
+            document.getElementById('phaseIndicator').textContent = `Fase: ${gameState.phase}`;
+            document.getElementById('remDrawsIndicator').textContent = `Pescate rimaste: ${gameState.drawsLeft}`;
+            switchScreen('drawScreen');
+        }
+
+        // --- Estrazione bonus parallela (30% di probabilità) ---
+        function rollBonus() {
+            const triggered = Math.random() < 0.30;
+            const bonusBox = document.getElementById('bonusBox');
+            bonusBox.style.display = 'block';
+
+            if (!triggered) {
+                bonusBox.classList.add('no-bonus');
+                bonusBox.innerHTML = "🎲 Peccato Nessun Bonus";
+                timerBaseSeconds = 60;
+                return;
+            }
+
+            bonusBox.classList.remove('no-bonus');
+            const chosen = bonusPool[Math.floor(Math.random() * bonusPool.length)];
+
+            if (chosen.type === "time") {
+                timerBaseSeconds = 60 + chosen.seconds;
+                bonusBox.innerHTML = `✨ <strong>BONUS!</strong> ${chosen.label}`;
+            } else {
+                timerBaseSeconds = 60;
+                bonusBox.innerHTML = `✨ <strong>BONUS!</strong> ${chosen.label} <span style="opacity:0.7">oppure ${chosen.fallbackLabel}</span>`;
+            }
         }
 
         function drawActivity() {
@@ -473,6 +617,10 @@
             let receiverName = gameState.names[gameState.currentPlayer];
             document.getElementById('activityText').innerHTML =
                 `<div class="receiver-text">${receiverName} riceve:</div>` + displayTxt;
+
+            // Estrazione bonus in parallelo
+            rollBonus();
+
             showTimerGlobal();
 
             gameState.drawsLeft--;
@@ -499,13 +647,27 @@
         function resetTimerUI() {
             clearInterval(timerInterval);
             stopAlarm();
-            document.getElementById('timerDisplay').textContent = "60";
+            timerRunning = false;
+            timerBaseSeconds = timerBaseSeconds || 60;
+            timerCurrentSeconds = timerBaseSeconds;
+            document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
             document.getElementById('startTimerBtn').style.display = 'inline-block';
+            document.getElementById('timerAddControls').style.display = 'flex';
+            document.getElementById('bonusBox').style.display = 'none';
+        }
+
+        function addTimerBlock() {
+            if (timerRunning) return; // si possono aggiungere blocchi solo prima di avviare il timer
+            timerBaseSeconds += 10;
+            timerCurrentSeconds = timerBaseSeconds;
+            document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
         }
 
         function startTimer() {
+            timerRunning = true;
             document.getElementById('startTimerBtn').style.display = 'none';
-            let timeLeft = 60;
+            document.getElementById('timerAddControls').style.display = 'none';
+            let timeLeft = timerCurrentSeconds;
             const display = document.getElementById('timerDisplay');
             
             timerInterval = setInterval(() => {
@@ -570,6 +732,8 @@
             resetTimerUI();
             switchScreen('coopScreen');
             document.getElementById('coopActivityText').innerHTML = coopActivities[gameState.phase];
+            timerBaseSeconds = 60;
+            resetTimerUI();
             showTimerGlobal();
         }
 
@@ -583,19 +747,24 @@
                 updateFinalActivityText();
             } else {
                 gameState.drawsLeft = 4;
-                document.getElementById('phaseIndicator').textContent = `Fase: ${gameState.phase}`;
-                document.getElementById('remDrawsIndicator').textContent = `Pescate rimaste: ${gameState.drawsLeft}`;
                 document.getElementById('activityText').textContent = `Fase ${gameState.phase} pronta. Clicca su "Pesca Attività".`;
                 document.getElementById('drawBtn').textContent = "Pesca Attività";
                 document.getElementById('drawBtn').setAttribute('onclick', 'drawActivity()');
-                switchScreen('drawScreen');
+                // Sorteggio di chi inizia la nuova fase
+                startPhaseDraw();
             }
         }
 
-        function rollDice() {
+        // --- Lancio dadi sequenziale per la sfida finale (suspance) ---
+        let diceRollInProgress = false;
+
+        function rollDiceSequence() {
+            if (diceRollInProgress) return;
+            diceRollInProgress = true;
+
             resetTimerUI();
             hideTimerGlobal();
-            
+
             const btn = document.getElementById('rollBtn');
             const d1 = document.getElementById('dice1');
             const d2 = document.getElementById('dice2');
@@ -603,35 +772,52 @@
 
             btn.disabled = true;
             card.classList.remove('bonus-card');
-            d1.classList.add('rolling');
-            d2.classList.add('rolling');
+            d1.textContent = "?";
+            d2.textContent = "?";
 
+            const p1Name = gameState.names[1];
+            const p2Name = gameState.names[2];
+
+            document.getElementById('finalActivityText').innerHTML = `<strong>${p1Name} lancia il dado...</strong> 🎲`;
+            d1.classList.add('rolling');
+
+            // Primo dado
             setTimeout(() => {
                 d1.classList.remove('rolling');
-                d2.classList.remove('rolling');
-
                 let v1 = Math.floor(Math.random() * 6) + 1;
-                let v2 = Math.floor(Math.random() * 6) + 1;
-
                 d1.textContent = v1;
-                d2.textContent = v2;
 
-                if (v1 > v2) {
-                    gameState.scores[1]++;
-                    announceRoundWinner(1);
-                } else if (v2 > v1) {
-                    gameState.scores[2]++;
-                    announceRoundWinner(2);
-                } else {
-                    document.getElementById('finalActivityText').innerHTML = "<strong>PAREGGIO! 🎲</strong><br>I valori sono uguali. Rilanciate i dadi!";
-                }
+                document.getElementById('finalActivityText').innerHTML =
+                    `<strong>${p1Name} ha fatto ${v1}!</strong><br>Ora tocca a ${p2Name}... 🎲`;
 
-                document.getElementById('p1Score').textContent = gameState.scores[1];
-                document.getElementById('p2Score').textContent = gameState.scores[2];
+                // Pausa di suspance prima del secondo dado
+                setTimeout(() => {
+                    d2.classList.add('rolling');
 
-                checkGameEnd();
-                btn.disabled = false;
-            }, 600);
+                    setTimeout(() => {
+                        d2.classList.remove('rolling');
+                        let v2 = Math.floor(Math.random() * 6) + 1;
+                        d2.textContent = v2;
+
+                        if (v1 > v2) {
+                            gameState.scores[1]++;
+                            announceRoundWinner(1);
+                        } else if (v2 > v1) {
+                            gameState.scores[2]++;
+                            announceRoundWinner(2);
+                        } else {
+                            document.getElementById('finalActivityText').innerHTML = "<strong>PAREGGIO! 🎲</strong><br>I valori sono uguali. Rilanciate i dadi!";
+                        }
+
+                        document.getElementById('p1Score').textContent = gameState.scores[1];
+                        document.getElementById('p2Score').textContent = gameState.scores[2];
+
+                        checkGameEnd();
+                        btn.disabled = false;
+                        diceRollInProgress = false;
+                    }, 800);
+                }, 700);
+            }, 800);
         }
 
         function announceRoundWinner(winner) {
@@ -653,6 +839,7 @@
                     `<strong>${loserName}, esegui:</strong><br>` +
                     `<span style='color:#ffd700; font-size:1.4rem;'>${bonusActivity}</span>`;
                 
+                timerBaseSeconds = 60;
                 showTimerGlobal();
                 return; // Interrompe il normale annuncio del punto per mostrare la consolazione
             }
@@ -661,6 +848,7 @@
             let activity = finalSequence[currentScore - 1] || "Preparati al gran finale!";
             if (currentScore <= 3) {
                 document.getElementById('finalActivityText').innerHTML = `<strong>Punto per ${winnerName}! 🎯</strong><br>Esegui l'attività del ${currentScore}° Punto:<br><span style='color:var(--accent-color); font-size:1.4rem;'>${activity}</span>`;
+                timerBaseSeconds = 60;
                 showTimerGlobal();
             }
         }
@@ -714,11 +902,13 @@
             };
             gameState.scores = { 1: 0, 2: 0 };
             gameState.bonusGiven = false;
+            timerBaseSeconds = 60;
 
             document.getElementById('phaseIndicator').textContent = "Fase: 1";
             document.getElementById('remDrawsIndicator').textContent = "Pescate rimaste: 4";
             document.getElementById('activityText').textContent = "Clicca su \"Pesca Attività\" per iniziare il match";
             document.getElementById('historySublist').style.display = 'none';
+            document.getElementById('bonusBox').style.display = 'none';
             document.getElementById('drawBtn').textContent = "Pesca Attività";
             document.getElementById('drawBtn').setAttribute('onclick', 'drawActivity()');
             
@@ -733,10 +923,11 @@
             document.getElementById('globalResetBtn').style.display = 'inline-block';
 
             updateNames();
-            switchScreen('drawScreen');
+            startPhaseDraw();
         }
 
         updateNames();
+        startPhaseDraw();
     </script>
 </body>
 </html>
