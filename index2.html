@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Couple Match</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #120c10;
+            --card-bg: #1d141a;
+            --accent-color: #d4a373;
+            --text-color: #f4eae1;
+            --text-muted: #a08796;
+            --danger-color: #9e2a2b;
+            --success-color: #386641;
+            --bonus-color: #723c5a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'DM Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card-bg);
+            border: 1px solid rgba(212, 163, 115, 0.2);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'Cormorant Garamond', 'Playfair Display', serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        .players-setup {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 25px;
+            background: rgba(255,255,255,0.03);
+            padding: 15px;
+            border-radius: 16px;
+        }
+
+        .player-input-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .player-input-group label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .player-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid var(--text-muted);
+            color: var(--text-color);
+            font-size: 1rem;
+            padding: 5px 0;
+            transition: border-color 0.3s;
+        }
+
+        .player-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+
+        .turn-indicator {
+            font-weight: 700;
+            font-size: 1.05rem;
+            letter-spacing: 0.5px;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+        }
+
+        .receiver-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .game-screen {
+            display: none;
+        }
+
+        .game-screen.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #d4a373, #b58253);
+            color: #120c10;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+            transition: transform 0.2s, opacity 0.2s;
+            box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--accent-color);
+            border: 2px solid var(--accent-color);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            width: auto;
+            margin: 4px;
+            display: inline-block;
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: var(--danger-color);
+            border: 1px solid var(--danger-color);
+            padding: 8px 16px;
+            font-size: 0.8rem;
+            width: auto;
+            margin-top: 30px;
+            box-shadow: none;
+        }
+
+        .activity-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px dashed rgba(212, 163, 115, 0.3);
+            border-radius: 16px;
+            padding: 30px 20px;
+            margin: 20px 0;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.45rem;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            line-height: 1.4;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .bonus-card {
+            background: rgba(114, 60, 90, 0.2);
+            border-color: var(--bonus-color);
+            color: #e5b3cb;
+        }
+
+        .history-list {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-align: left;
+            margin-top: 15px;
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        /* Welcome screen iniziale */
+        .welcome-screen-inner {
+            padding: 10px 0 5px;
+        }
+
+        .welcome-tagline {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.15rem;
+            font-style: italic;
+            color: var(--text-muted);
+            margin-bottom: 22px;
+            letter-spacing: 0.5px;
+        }
+
+        .welcome-hint {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 12px;
+            letter-spacing: 0.3px;
+        }
+
+        /* Sorteggio chi inizia */
+        .starter-draw-box {
+            background: rgba(212, 163, 115, 0.08);
+            border: 1px solid var(--accent-color);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .starter-draw-box .label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .starter-draw-box .winner-name {
+            font-family: 'Cormorant Garamond', 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffd700;
+            margin-top: 8px;
+            text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+            animation: pulseGlow 1.2s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* Bonus box */
+        .bonus-box {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            border: 1px solid var(--bonus-color);
+            background: rgba(114, 60, 90, 0.15);
+            color: #e5b3cb;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .bonus-box.no-bonus {
+            border-color: rgba(160, 135, 150, 0.3);
+            background: rgba(255,255,255,0.02);
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Timer Globale */
+        .global-timer-container {
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 0.3s;
+        }
+
+        .timer-circle {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-bottom: 5px;
+        }
+
+        .timer-add-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .draw-controls {
+            display: none;
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .draw-controls.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        .dice-container {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+        }
+
+        .dice-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .dice {
+            width: 60px;
+            height: 60px;
+            background: var(--text-color);
+            color: var(--bg-color);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-top: 10px;
+            box-shadow: 0 5px 15px rgba(255,255,255,0.1);
+            transition: transform 0.5s ease;
+        }
+
+        .rolling {
+            animation: roll 0.5s infinite linear;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes roll {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .celebration {
+            color: #ffd700;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .coupon {
+            border: 2px dashed var(--accent-color);
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 8px;
+            background: rgba(214, 163, 115, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Couple Match</h1>
+
+        <div class="players-setup" id="setupContainer">
+            <div class="player-input-group">
+                <label for="p1Name">Lui/Lei 1</label>
+                <input type="text" id="p1Name" class="player-input" value="Giocatore 1" onchange="updateNames()">
+            </div>
+            <div class="player-input-group">
+                <label for="p2Name">Lui/Lei 2</label>
+                <input type="text" id="p2Name" class="player-input" value="Giocatore 2" onchange="updateNames()">
+            </div>
+        </div>
+
+        <!-- Welcome screen: inserimento nomi prima del sorteggio -->
+        <div id="welcomeScreen" class="game-screen active">
+            <div class="welcome-screen-inner">
+                <p class="welcome-tagline">Il gioco per accendere la serata ✨</p>
+                <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:6px;">Inserite i vostri nomi qui sopra, poi partite!</p>
+                <button class="btn" onclick="goToStarterDraw()">Procedi al Sorteggio 🎲</button>
+                <p class="welcome-hint">Il sorteggio deciderà chi inizia ogni fase.</p>
+            </div>
+        </div>
+
+        <!-- Sorteggio di inizio fase -->
+        <div id="starterDrawScreen" class="game-screen">
+            <div class="starter-draw-box">
+                <div class="label">Sorteggio inizio fase <span id="starterPhaseLabel">1</span></div>
+                <div class="winner-name" id="starterWinnerName">Pronti?</div>
+            </div>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-top:10px;">Scrivete i vostri nomi qui sopra, poi sorteggiate chi inizia.</p>
+            <button class="btn" id="runDrawBtn" onclick="runStarterDraw()">🎲 Sorteggia chi inizia</button>
+            <button class="btn" id="confirmStarterBtn" onclick="confirmStarter()" style="display:none;">Inizia la fase</button>
+        </div>
+
+        <div id="drawScreen" class="game-screen">
+            <div class="status-bar">
+                <span id="phaseIndicator">Fase: 1</span>
+                <span id="remDrawsIndicator">Pescate rimaste: 4</span>
+            </div>
+
+            <div class="activity-card">
+                <div id="activityText">Clicca su "Pesca Attività" per iniziare il match</div>
+                <div id="historySublist" class="history-list" style="display:none;"></div>
+            </div>
+            <div id="bonusBox" class="bonus-box" style="display:none;"></div>
+        </div>
+
+        <div id="coopScreen" class="game-screen">
+            <div class="status-bar">
+                <span>Attività di Coppia In Comune!</span>
+            </div>
+            <div class="activity-card" style="border-style: solid; border-color: var(--accent-color);">
+                <div id="coopActivityText">ATTIVITÀ IN COMUNE</div>
+            </div>
+            <button class="btn" onclick="nextPhase()">Procedi alla prossima fase</button>
+        </div>
+
+        <div id="finalScreen" class="game-screen">
+            <div class="status-bar">
+                <span>FASE FINALE</span>
+                <span id="finalRoundTarget">Arriva a 4 punti!</span>
+            </div>
+            
+            <div class="score-board">
+                <div><span class="p1Label">G1</span>: <span id="p1Score">0</span>/4</div>
+                <div><span class="p2Label">G2</span>: <span id="p2Score">0</span>/4</div>
+            </div>
+
+            <div class="activity-card" id="finalActivityCard">
+                <div id="finalActivityText">Lanciate i dadi per decretare chi farà il punto!</div>
+            </div>
+
+            <div class="dice-container">
+                <div class="dice-box">
+                    <span class="p1Label">Giocatore 1</span>
+                    <div class="dice" id="dice1">?</div>
+                </div>
+                <div class="dice-box">
+                    <span class="p2Label">Giocatore 2</span>
+                    <div class="dice" id="dice2">?</div>
+                </div>
+            </div>
+
+            <button class="btn" id="rollBtn" onclick="rollDiceSequence()">Lancia i Dadi</button>
+        </div>
+
+        <div id="winnerScreen" class="game-screen">
+            <div class="celebration">🎉 SINTONIA PERFETTA! 🎉</div>
+            <h2 id="winnerText" style="color: var(--accent-color); margin-bottom:15px;">Vince Giocatore X</h2>
+            
+            <div class="activity-card" style="background: rgba(56, 102, 65, 0.2);">
+                <strong>👑 HAPPY ENDING:</strong>
+                <p style="margin-top:5px; font-size:1.1rem;">Ti spetta il controllo totale e il massimo del piacere finale!</p>
+            </div>
+
+            <div class="coupon">
+                <strong>🎟️ Coupon di Consolazione:</strong>
+                <p id="loserCouponText" style="font-size:0.95rem; margin-top:5px; color:var(--text-muted);">Può essere estratto al seguente link: <a href="https://assessore81.github.io/couple_coupon/" target="_blank" style="color:var(--accent-color);">assessore81.github.io/couple_coupon</a></p>
+            </div>
+
+            <button class="btn" onclick="resetGame(true)">Gioca Ancora</button>
+        </div>
+
+        <div id="globalTimer" class="global-timer-container">
+            <div class="timer-circle" id="timerDisplay">60</div>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Tempo per l'attività!</div>
+            <div class="timer-add-controls" id="timerAddControls">
+                <button class="btn btn-outline btn-small" onclick="addTimerBlock()">+10 secondi</button>
+                <button class="btn btn-outline btn-small" onclick="restoreTimerDefault()">↺ Ripristina 60s</button>
+            </div>
+            <button class="btn btn-outline" id="startTimerBtn" onclick="startTimer()">Avvia Timer</button>
+            <button class="btn btn-danger" id="stopAlarmBtn" style="display:none; margin-top:15px;" onclick="stopAlarm()">🔕 Ferma Allarme</button>
+        </div>
+
+        <div id="drawControls" class="draw-controls">
+            <div class="turn-indicator" id="turnIndicator">Turno di: Giocatore 1</div>
+            <button class="btn" id="drawBtn" onclick="drawActivity()">Pesca Attività</button>
+        </div>
+
+        <button class="btn btn-danger" id="globalResetBtn" onclick="confirmReset()">Azzera Gioco</button>
+    </div>
+
+    <script>
+        // Array originali per la Scelta a Piacere
+        const origPools = {
+            1: ["BACIA BOCCA", "PALPA SEDERE", "TOCCA SESSO SOPRA I VESTITI", "STRUSCIA IL SESSO SOPRA I VESTITI", "USA IL VIBRATORE SOPRA I VESTITI", "BACIA SESSO SOPRA I VESTITI"],
+            2: ["USA VIBRATORE SU SENO/TESTICOLI", "PALPA SENO/TESTICOLI", "MASTURBA CON LE MANI", "STIMOLA CAPEZZOLI/USA CAPEZZOLI SUL SESSO", "STRUSCIA GAMBA SU SESSO"],
+            3: ["BACIA SESSO", "USA VIBRATORE", "STIMOLA CULETTO/MASTURBA CON I SENI", "MASTURBA CON LE MANI", "BACIA SENI/TESTICOLI"]
+        };
+
+        const phase1Pool = [...origPools[1]];
+        const phase2Pool = [...origPools[2], "SCELTA A PIACERE"];
+        const phase3Pool = [...origPools[3], "SCELTA A PIACERE"];
+
+        const coopActivities = {
+            1: "BACIA CON LA LINGUA<br><span style='font-size:0.9rem; color:var(--text-muted)'>(Da adesso sarete completamente NUDI)</span>",
+            2: "MASTURBARSI CON LE MANI A VICENDA",
+            3: "EFFETTUA LA POSIZIONE DEL 69"
+        };
+
+        const finalSequence = [
+            "LECCA SESSO",
+            "SIEDI SULLA FACCIA DI LUI/LEI",
+            "MASTURBA CON MANI E BOCCA"
+        ];
+
+        // Definizione dei bonus estraibili (30% di probabilità di ottenerne uno)
+        const bonusPool = [
+            { id: "plus10", label: "+10 secondi", type: "time", seconds: 10 },
+            { id: "plus20", label: "+20 secondi", type: "time", seconds: 20 },
+            { id: "kiss", label: "Aggiungi bacio", type: "choice", fallbackLabel: "+10 secondi", fallbackSeconds: 10 },
+            { id: "blindfold", label: "Ricevi attività da bendato", type: "choice", fallbackLabel: "+10 secondi", fallbackSeconds: 10 },
+            { id: "lube", label: "Aggiungi lubrificante", type: "choice", fallbackLabel: "+10 secondi", fallbackSeconds: 10 }
+        ];
+
+        let gameState = {
+            phase: 1,
+            drawsLeft: 4,
+            currentPlayer: 1,
+            pools: {
+                1: [...phase1Pool],
+                2: [...phase2Pool],
+                3: [...phase3Pool]
+            },
+            scores: { 1: 0, 2: 0 },
+            names: { 1: "Giocatore 1", 2: "Giocatore 2" },
+            bonusGiven: false
+        };
+
+        let timerInterval = null;
+        let alarmInterval = null;
+        let timerBaseSeconds = 60;
+        let timerCurrentSeconds = 60;
+        let timerRunning = false;
+
+        function updateNames() {
+            gameState.names[1] = document.getElementById('p1Name').value || "Giocatore 1";
+            gameState.names[2] = document.getElementById('p2Name').value || "Giocatore 2";
+            document.querySelectorAll('.p1Label').forEach(el => el.textContent = gameState.names[1]);
+            document.querySelectorAll('.p2Label').forEach(el => el.textContent = gameState.names[2]);
+            updateTurnIndicator();
+        }
+
+        function updateTurnIndicator() {
+            document.getElementById('turnIndicator').textContent = `Turno di: ${gameState.names[gameState.currentPlayer]}`;
+        }
+
+        // --- Welcome screen: procedi al sorteggio ---
+        function goToStarterDraw() {
+            updateNames(); // assicura che i nomi siano aggiornati prima del sorteggio
+            startPhaseDraw();
+        }
+
+        // --- Sorteggio chi inizia la fase ---
+        function startPhaseDraw() {
+            switchScreen('starterDrawScreen');
+            document.getElementById('starterPhaseLabel').textContent = gameState.phase;
+            document.getElementById('starterWinnerName').textContent = "Pronti?";
+            document.getElementById('runDrawBtn').style.display = 'inline-block';
+            document.getElementById('runDrawBtn').disabled = false;
+            document.getElementById('confirmStarterBtn').style.display = 'none';
+        }
+
+        function runStarterDraw() {
+            const nameEl = document.getElementById('starterWinnerName');
+            const runBtn = document.getElementById('runDrawBtn');
+            const confirmBtn = document.getElementById('confirmStarterBtn');
+            runBtn.disabled = true;
+
+            // breve effetto suspance prima di rivelare chi inizia
+            let ticks = 0;
+            const shuffleInterval = setInterval(() => {
+                nameEl.textContent = Math.random() < 0.5 ? gameState.names[1] : gameState.names[2];
+                ticks++;
+                if (ticks > 8) {
+                    clearInterval(shuffleInterval);
+                    gameState.currentPlayer = Math.random() < 0.5 ? 1 : 2;
+                    nameEl.textContent = `${gameState.names[gameState.currentPlayer]} inizia! 🎲`;
+                    runBtn.style.display = 'none';
+                    confirmBtn.style.display = 'inline-block';
+                }
+            }, 150);
+        }
+
+        function confirmStarter() {
+            updateTurnIndicator();
+            document.getElementById('phaseIndicator').textContent = `Fase: ${gameState.phase}`;
+            document.getElementById('remDrawsIndicator').textContent = `Pescate rimaste: ${gameState.drawsLeft}`;
+            switchScreen('drawScreen');
+        }
+
+        // --- Estrazione bonus parallela (30% di probabilità) ---
+        function rollBonus() {
+            const triggered = Math.random() < 0.30;
+            const bonusBox = document.getElementById('bonusBox');
+            bonusBox.style.display = 'block';
+
+            if (!triggered) {
+                bonusBox.classList.add('no-bonus');
+                bonusBox.innerHTML = "🎲 Peccato Nessun Bonus";
+                timerBaseSeconds = 60;
+                timerCurrentSeconds = 60;
+                document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
+                return;
+            }
+
+            bonusBox.classList.remove('no-bonus');
+            const chosen = bonusPool[Math.floor(Math.random() * bonusPool.length)];
+
+            if (chosen.type === "time") {
+                timerBaseSeconds = 60 + chosen.seconds;
+                bonusBox.innerHTML = `✨ <strong>BONUS!</strong> ${chosen.label}`;
+            } else {
+                timerBaseSeconds = 60;
+                bonusBox.innerHTML = `✨ <strong>BONUS!</strong> ${chosen.label} <span style="opacity:0.7">oppure ${chosen.fallbackLabel}</span>`;
+            }
+            timerCurrentSeconds = timerBaseSeconds;
+            document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
+        }
+
+        function drawActivity() {
+            resetTimerUI();
+
+            let currentPool = gameState.pools[gameState.phase];
+            if (currentPool.length === 0) return;
+
+            let randomIndex = Math.floor(Math.random() * currentPool.length);
+            let selected = currentPool.splice(randomIndex, 1)[0];
+            let displayTxt = selected;
+
+            document.getElementById('historySublist').style.display = 'none';
+
+            if (selected === "SCELTA A PIACERE") {
+                displayTxt = "SCELTA A PIACERE!<br><span style='font-size:1rem; color:var(--accent-color)'>Scegli tra tutte le attività di questa fase:</span>";
+                let historyHtml = "<ul>" + origPools[gameState.phase].map(act => `<li>${act}</li>`).join('') + "</ul>";
+                document.getElementById('historySublist').innerHTML = historyHtml;
+                document.getElementById('historySublist').style.display = 'block';
+            }
+
+            let receiverName = gameState.names[gameState.currentPlayer];
+            document.getElementById('activityText').innerHTML =
+                `<div class="receiver-text">${receiverName} riceve:</div>` + displayTxt;
+
+            // Estrazione bonus in parallelo
+            rollBonus();
+
+            showTimerGlobal();
+
+            gameState.drawsLeft--;
+            document.getElementById('remDrawsIndicator').textContent = `Pescate rimaste: ${gameState.drawsLeft}`;
+            gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+            updateTurnIndicator();
+
+            if (gameState.drawsLeft === 0) {
+                document.getElementById('drawBtn').textContent = "Vedi Attività di Coppia";
+                document.getElementById('drawBtn').setAttribute('onclick', 'showCoopScreen()');
+            }
+        }
+
+        // --- Logica Timer Globale ---
+        function showTimerGlobal() {
+            document.getElementById('globalTimer').style.display = 'flex';
+        }
+
+        function hideTimerGlobal() {
+            document.getElementById('globalTimer').style.display = 'none';
+            resetTimerUI();
+        }
+
+        function resetTimerUI() {
+            clearInterval(timerInterval);
+            stopAlarm();
+            timerRunning = false;
+            timerBaseSeconds = 60; // ogni nuova attività riparte sempre da 60s di base
+            timerCurrentSeconds = timerBaseSeconds;
+            document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
+            document.getElementById('startTimerBtn').style.display = 'inline-block';
+            document.getElementById('timerAddControls').style.display = 'flex';
+            document.getElementById('bonusBox').style.display = 'none';
+        }
+
+        function addTimerBlock() {
+            if (timerRunning) return; // si possono aggiungere blocchi solo prima di avviare il timer
+            timerBaseSeconds += 10;
+            timerCurrentSeconds = timerBaseSeconds;
+            document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
+        }
+
+        function restoreTimerDefault() {
+            if (timerRunning) return; // disponibile solo prima di avviare il timer
+            timerBaseSeconds = 60;
+            timerCurrentSeconds = 60;
+            document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
+        }
+
+        function startTimer() {
+            timerRunning = true;
+            document.getElementById('startTimerBtn').style.display = 'none';
+            document.getElementById('timerAddControls').style.display = 'none';
+            let timeLeft = timerCurrentSeconds;
+            const display = document.getElementById('timerDisplay');
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                display.textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    triggerAlarm();
+                }
+            }, 1000);
+        }
+
+        function playAlarmSound() {
+            try {
+                let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let oscillator = audioCtx.createOscillator();
+                let gainNode = audioCtx.createGain();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.start();
+                setTimeout(() => { oscillator.stop(); }, 500);
+                setTimeout(() => {
+                    let osc2 = audioCtx.createOscillator();
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(880, audioCtx.currentTime);
+                    osc2.connect(gainNode);
+                    osc2.start();
+                    setTimeout(() => { osc2.stop(); }, 500);
+                }, 700);
+            } catch (e) {
+                console.log("Audio non supportato.");
+            }
+        }
+
+        function triggerAlarm() {
+            document.getElementById('stopAlarmBtn').style.display = 'inline-block';
+
+            const vibrateAndPlay = () => {
+                if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500]);
+                playAlarmSound();
+            };
+
+            vibrateAndPlay();
+            // Continua a vibrare/suonare finché l'utente non preme "Ferma Allarme"
+            alarmInterval = setInterval(vibrateAndPlay, 1500);
+        }
+
+        function stopAlarm() {
+            if (alarmInterval) {
+                clearInterval(alarmInterval);
+                alarmInterval = null;
+            }
+            if (navigator.vibrate) navigator.vibrate(0);
+            document.getElementById('stopAlarmBtn').style.display = 'none';
+        }
+
+        function showCoopScreen() {
+            resetTimerUI();
+            switchScreen('coopScreen');
+            document.getElementById('coopActivityText').innerHTML = coopActivities[gameState.phase];
+            timerBaseSeconds = 60;
+            resetTimerUI();
+            showTimerGlobal();
+        }
+
+        function nextPhase() {
+            hideTimerGlobal();
+            gameState.phase++;
+            
+            if (gameState.phase > 3) {
+                document.getElementById('setupContainer').style.display = 'none';
+                switchScreen('finalScreen');
+                updateFinalActivityText();
+            } else {
+                gameState.drawsLeft = 4;
+                document.getElementById('activityText').textContent = `Fase ${gameState.phase} pronta. Clicca su "Pesca Attività".`;
+                document.getElementById('drawBtn').textContent = "Pesca Attività";
+                document.getElementById('drawBtn').setAttribute('onclick', 'drawActivity()');
+                // Sorteggio di chi inizia la nuova fase
+                startPhaseDraw();
+            }
+        }
+
+        // --- Lancio dadi sequenziale per la sfida finale (suspance) ---
+        let diceRollInProgress = false;
+
+        function rollDiceSequence() {
+            if (diceRollInProgress) return;
+            diceRollInProgress = true;
+
+            resetTimerUI();
+            hideTimerGlobal();
+
+            const btn = document.getElementById('rollBtn');
+            const d1 = document.getElementById('dice1');
+            const d2 = document.getElementById('dice2');
+            const card = document.getElementById('finalActivityCard');
+
+            btn.disabled = true;
+            card.classList.remove('bonus-card');
+            d1.textContent = "?";
+            d2.textContent = "?";
+
+            const p1Name = gameState.names[1];
+            const p2Name = gameState.names[2];
+
+            document.getElementById('finalActivityText').innerHTML = `<strong>${p1Name} lancia il dado...</strong> 🎲`;
+            d1.classList.add('rolling');
+
+            // Primo dado
+            setTimeout(() => {
+                d1.classList.remove('rolling');
+                let v1 = Math.floor(Math.random() * 6) + 1;
+                d1.textContent = v1;
+
+                document.getElementById('finalActivityText').innerHTML =
+                    `<strong>${p1Name} ha fatto ${v1}!</strong><br>Ora tocca a ${p2Name}... 🎲`;
+
+                // Pausa di suspance prima del secondo dado
+                setTimeout(() => {
+                    d2.classList.add('rolling');
+
+                    setTimeout(() => {
+                        d2.classList.remove('rolling');
+                        let v2 = Math.floor(Math.random() * 6) + 1;
+                        d2.textContent = v2;
+
+                        if (v1 > v2) {
+                            gameState.scores[1]++;
+                            announceRoundWinner(1);
+                        } else if (v2 > v1) {
+                            gameState.scores[2]++;
+                            announceRoundWinner(2);
+                        } else {
+                            document.getElementById('finalActivityText').innerHTML = "<strong>PAREGGIO! 🎲</strong><br>I valori sono uguali. Rilanciate i dadi!";
+                        }
+
+                        document.getElementById('p1Score').textContent = gameState.scores[1];
+                        document.getElementById('p2Score').textContent = gameState.scores[2];
+
+                        checkGameEnd();
+                        btn.disabled = false;
+                        diceRollInProgress = false;
+                    }, 800);
+                }, 700);
+            }, 800);
+        }
+
+        function announceRoundWinner(winner) {
+            let currentScore = gameState.scores[winner];
+            let winnerName = gameState.names[winner];
+            let loser = winner === 1 ? 2 : 1;
+            let loserScore = gameState.scores[loser];
+            
+            // Controllo Regola di Consolazione 3-0
+            if (currentScore === 3 && loserScore === 0 && !gameState.bonusGiven) {
+                gameState.bonusGiven = true;
+                let loserName = gameState.names[loser];
+                let bonusActivity = finalSequence[0]; // Punto 1
+                
+                document.getElementById('finalActivityCard').classList.add('bonus-card');
+                document.getElementById('finalActivityText').innerHTML = 
+                    `<strong>Punto per ${winnerName}, MA... 🚨 ATTENZIONE!</strong><br>` +
+                    `<span style="font-size:0.9rem">Siamo sul 3-0. ${loserName} riceve una consolazione immediata prima di proseguire!</span><br><br>` +
+                    `<strong>${loserName}, esegui:</strong><br>` +
+                    `<span style='color:#ffd700; font-size:1.4rem;'>${bonusActivity}</span>`;
+                
+                timerBaseSeconds = 60;
+                showTimerGlobal();
+                return; // Interrompe il normale annuncio del punto per mostrare la consolazione
+            }
+            
+            // Comportamento Standard
+            let activity = finalSequence[currentScore - 1] || "Preparati al gran finale!";
+            if (currentScore <= 3) {
+                document.getElementById('finalActivityText').innerHTML = `<strong>Punto per ${winnerName}! 🎯</strong><br>Esegui l'attività del ${currentScore}° Punto:<br><span style='color:var(--accent-color); font-size:1.4rem;'>${activity}</span>`;
+                timerBaseSeconds = 60;
+                showTimerGlobal();
+            }
+        }
+
+        function updateFinalActivityText() {
+            document.getElementById('finalActivityText').innerHTML = "<strong>Inizia la sfida finale!</strong><br>Lanciate i dadi. Chi ottiene il punteggio più alto segna un punto ed esegue la sua attività in sequenza.";
+        }
+
+        function checkGameEnd() {
+            if (gameState.scores[1] === 4 || gameState.scores[2] === 4) {
+                hideTimerGlobal();
+                let finalWinner = gameState.scores[1] === 4 ? 1 : 2;
+                
+                document.getElementById('winnerText').textContent = `Vince ${gameState.names[finalWinner]}!`;
+                
+                setTimeout(() => {
+                    document.getElementById('globalResetBtn').style.display = 'none';
+                    switchScreen('winnerScreen');
+                }, 2000); // Leggero ritardo per far leggere l'ultimo punto
+            }
+        }
+
+        function switchScreen(screenId) {
+            document.querySelectorAll('.game-screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+
+            const drawControls = document.getElementById('drawControls');
+            if (screenId === 'drawScreen') {
+                drawControls.classList.add('active');
+            } else {
+                drawControls.classList.remove('active');
+            }
+        }
+
+        function confirmReset() {
+            if (confirm("Sei sicuro di voler azzerare la partita in corso? Perderai tutti i progressi.")) {
+                resetGame(false);
+            }
+        }
+
+        function resetGame(forcePlayAgain = false) {
+            hideTimerGlobal();
+            
+            gameState.phase = 1;
+            gameState.drawsLeft = 4;
+            gameState.currentPlayer = 1;
+            gameState.pools = {
+                1: [...phase1Pool],
+                2: [...phase2Pool],
+                3: [...phase3Pool]
+            };
+            gameState.scores = { 1: 0, 2: 0 };
+            gameState.bonusGiven = false;
+            timerBaseSeconds = 60;
+
+            document.getElementById('phaseIndicator').textContent = "Fase: 1";
+            document.getElementById('remDrawsIndicator').textContent = "Pescate rimaste: 4";
+            document.getElementById('activityText').textContent = "Clicca su \"Pesca Attività\" per iniziare il match";
+            document.getElementById('historySublist').style.display = 'none';
+            document.getElementById('bonusBox').style.display = 'none';
+            document.getElementById('drawBtn').textContent = "Pesca Attività";
+            document.getElementById('drawBtn').setAttribute('onclick', 'drawActivity()');
+            
+            document.getElementById('finalActivityCard').classList.remove('bonus-card');
+            document.getElementById('p1Score').textContent = "0";
+            document.getElementById('p2Score').textContent = "0";
+            document.getElementById('dice1').textContent = "?";
+            document.getElementById('dice2').textContent = "?";
+            updateFinalActivityText();
+
+            document.getElementById('setupContainer').style.display = 'flex';
+            document.getElementById('globalResetBtn').style.display = 'inline-block';
+
+            updateNames();
+            switchScreen('welcomeScreen');
+        }
+
+        updateNames();
+    </script>
+</body>
+</html>
