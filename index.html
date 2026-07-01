@@ -166,12 +166,6 @@
             color: var(--accent-color);
             border: 2px solid var(--accent-color);
         }
-        
-        .btn-success {
-            background: var(--success-color);
-            color: var(--text-color);
-            border: none;
-        }
 
         .btn-small {
             padding: 8px 16px;
@@ -338,7 +332,7 @@
             margin-bottom: 10px;
         }
 
-        /* Timer Globale (Mini UI) */
+        /* Timer Globale */
         .global-timer-container {
             margin-top: 25px;
             padding-top: 15px;
@@ -360,56 +354,6 @@
             display: flex;
             gap: 8px;
             margin-bottom: 10px;
-        }
-        
-        /* Overlay Fullscreen Timer */
-        .fullscreen-timer-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: var(--bg-color);
-            z-index: 9999;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .fullscreen-timer-overlay.active {
-            display: flex;
-        }
-
-        .huge-timer-display {
-            font-size: 35vw; /* Si adatta alla larghezza dello schermo */
-            font-weight: 700;
-            color: var(--accent-color);
-            margin-bottom: 40px;
-            font-family: 'Cormorant Garamond', serif;
-            line-height: 1;
-            text-shadow: 0 0 30px rgba(212, 163, 115, 0.5);
-            text-align: center;
-        }
-        
-        @media (min-width: 768px) {
-            .huge-timer-display {
-                font-size: 15rem; /* Limite per schermi molto larghi */
-            }
-        }
-
-        .timer-controls-group {
-            display: flex;
-            gap: 15px;
-            width: 100%;
-            max-width: 400px;
-            margin-top: 20px;
-        }
-
-        .timer-controls-group .btn {
-            margin-top: 0;
         }
 
         .draw-controls {
@@ -482,7 +426,7 @@
 
         .coupon {
             border: 2px dashed var(--accent-color);
-            padding: 20px 15px;
+            padding: 15px;
             margin-top: 20px;
             border-radius: 8px;
             background: rgba(214, 163, 115, 0.1);
@@ -505,6 +449,7 @@
             </div>
         </div>
 
+        <!-- Welcome screen: inserimento nomi prima del sorteggio -->
         <div id="welcomeScreen" class="game-screen active">
             <div class="welcome-screen-inner">
                 <p class="welcome-tagline">Il gioco per accendere la serata ✨</p>
@@ -514,6 +459,7 @@
             </div>
         </div>
 
+        <!-- Sorteggio di inizio fase -->
         <div id="starterDrawScreen" class="game-screen">
             <div class="starter-draw-box">
                 <div class="label">Sorteggio inizio fase <span id="starterPhaseLabel">1</span></div>
@@ -588,9 +534,8 @@
             </div>
 
             <div class="coupon">
-                <strong>🎟️ Coupon di Consolazione</strong>
-                <p id="loserCouponText" style="font-size:0.95rem; margin-top:5px; margin-bottom: 15px; color:var(--text-muted);">Chi ha perso riceve un premio di consolazione da estrarre:</p>
-                <button class="btn btn-outline" onclick="window.open('https://assessore81.github.io/couple_coupon/', '_blank')">🎟️ Genera Coupon</button>
+                <strong>🎟️ Coupon di Consolazione:</strong>
+                <p id="loserCouponText" style="font-size:0.95rem; margin-top:5px; color:var(--text-muted);">Può essere estratto al seguente link: <a href="https://assessore81.github.io/couple_coupon/" target="_blank" style="color:var(--accent-color);">assessore81.github.io/couple_coupon</a></p>
             </div>
 
             <button class="btn" onclick="resetGame(true)">Gioca Ancora</button>
@@ -613,18 +558,6 @@
         </div>
 
         <button class="btn btn-danger" id="globalResetBtn" onclick="confirmReset()">Azzera Gioco</button>
-    </div>
-
-    <div id="fullscreenTimer" class="fullscreen-timer-overlay">
-        <div style="font-size:1.5rem; color:var(--text-muted); margin-bottom:10px; text-transform:uppercase; letter-spacing:2px; text-align: center;">Tempo Rimanente</div>
-        <div id="hugeTimerValue" class="huge-timer-display">60</div>
-        
-        <div class="timer-controls-group" id="fsTimerRunningControls">
-            <button class="btn btn-outline" id="fsPauseBtn" onclick="togglePauseTimer()">⏸ Pausa</button>
-            <button class="btn btn-danger" onclick="exitTimerFullscreen()">⏹ Termina</button>
-        </div>
-
-        <button class="btn btn-danger" id="fsStopAlarmBtn" style="display:none; width: 100%; max-width: 400px; font-size: 1.3rem; padding: 25px; border-radius: 15px;" onclick="stopAlarm()">🔕 Ferma Allarme e Chiudi</button>
     </div>
 
     <script>
@@ -680,7 +613,6 @@
         let timerBaseSeconds = 60;
         let timerCurrentSeconds = 60;
         let timerRunning = false;
-        let timerPaused = false; // Gestione pausa per il full screen timer
 
         function updateNames() {
             gameState.names[1] = document.getElementById('p1Name').value || "Giocatore 1";
@@ -898,7 +830,7 @@
             }
         }
 
-        // --- Logica Timer Globale e Fullscreen ---
+        // --- Logica Timer Globale ---
         function showTimerGlobal() {
             document.getElementById('globalTimer').style.display = 'flex';
         }
@@ -912,23 +844,12 @@
             clearInterval(timerInterval);
             stopAlarm();
             timerRunning = false;
-            timerPaused = false;
             timerBaseSeconds = 60; // ogni nuova attività riparte sempre da 60s di base
             timerCurrentSeconds = timerBaseSeconds;
-            
             document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
-            document.getElementById('hugeTimerValue').textContent = timerCurrentSeconds;
             document.getElementById('startTimerBtn').style.display = 'inline-block';
             document.getElementById('timerAddControls').style.display = 'flex';
             document.getElementById('bonusBox').style.display = 'none';
-            
-            // Ripristina l'aspetto originario del pulsante Pausa
-            let pauseBtn = document.getElementById('fsPauseBtn');
-            pauseBtn.innerHTML = "⏸ Pausa";
-            pauseBtn.className = "btn btn-outline";
-            pauseBtn.style.background = "";
-            pauseBtn.style.color = "";
-            pauseBtn.style.border = "";
         }
 
         function addTimerBlock() {
@@ -936,7 +857,6 @@
             timerBaseSeconds += 10;
             timerCurrentSeconds = timerBaseSeconds;
             document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
-            document.getElementById('hugeTimerValue').textContent = timerCurrentSeconds;
         }
 
         function restoreTimerDefault() {
@@ -944,64 +864,24 @@
             timerBaseSeconds = 60;
             timerCurrentSeconds = 60;
             document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
-            document.getElementById('hugeTimerValue').textContent = timerCurrentSeconds;
         }
 
         function startTimer() {
-            if (timerRunning) return;
             timerRunning = true;
-            timerPaused = false;
-            
-            // Nascondi i controlli nella pagina base
             document.getElementById('startTimerBtn').style.display = 'none';
             document.getElementById('timerAddControls').style.display = 'none';
-            
-            // Prepara e mostra l'overlay fullscreen
-            document.getElementById('hugeTimerValue').textContent = timerCurrentSeconds;
-            document.getElementById('fsTimerRunningControls').style.display = 'flex';
-            document.getElementById('fsStopAlarmBtn').style.display = 'none';
-            document.getElementById('fullscreenTimer').classList.add('active');
-            
+            let timeLeft = timerCurrentSeconds;
             const display = document.getElementById('timerDisplay');
-            const hugeDisplay = document.getElementById('hugeTimerValue');
             
             timerInterval = setInterval(() => {
-                if (!timerPaused) {
-                    timerCurrentSeconds--;
-                    display.textContent = timerCurrentSeconds;
-                    hugeDisplay.textContent = timerCurrentSeconds;
+                timeLeft--;
+                display.textContent = timeLeft;
 
-                    if (timerCurrentSeconds <= 0) {
-                        clearInterval(timerInterval);
-                        triggerAlarm();
-                    }
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    triggerAlarm();
                 }
             }, 1000);
-        }
-
-        function togglePauseTimer() {
-            timerPaused = !timerPaused;
-            let pauseBtn = document.getElementById('fsPauseBtn');
-            
-            if (timerPaused) {
-                pauseBtn.innerHTML = "▶ Riprendi";
-                pauseBtn.className = "btn btn-success";
-                pauseBtn.style.background = "var(--success-color)";
-                pauseBtn.style.color = "var(--text-color)";
-                pauseBtn.style.border = "none";
-            } else {
-                pauseBtn.innerHTML = "⏸ Pausa";
-                pauseBtn.className = "btn btn-outline";
-                pauseBtn.style.background = "transparent";
-                pauseBtn.style.color = "var(--accent-color)";
-                pauseBtn.style.border = "2px solid var(--accent-color)";
-            }
-        }
-
-        function exitTimerFullscreen() {
-            // Chiude la schermata del timer e resetta il cronometro
-            document.getElementById('fullscreenTimer').classList.remove('active');
-            resetTimerUI();
         }
 
         function playAlarmSound() {
@@ -1030,12 +910,7 @@
         }
 
         function triggerAlarm() {
-            // Seleziona entrambi i tasti (quello nell'interfaccia e quello fullscreen)
             document.getElementById('stopAlarmBtn').style.display = 'inline-block';
-            
-            // Attiva la schermata pulsante di stop gigante per l'overlay
-            document.getElementById('fsTimerRunningControls').style.display = 'none';
-            document.getElementById('fsStopAlarmBtn').style.display = 'block';
 
             const vibrateAndPlay = () => {
                 if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500]);
@@ -1053,14 +928,7 @@
                 alarmInterval = null;
             }
             if (navigator.vibrate) navigator.vibrate(0);
-            
             document.getElementById('stopAlarmBtn').style.display = 'none';
-            
-            // Chiudi il timer full screen se presente
-            document.getElementById('fullscreenTimer').classList.remove('active');
-            
-            // Prepara il cronometro per l'attività successiva
-            resetTimerUI();
         }
 
         function showCoopScreen() {
