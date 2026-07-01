@@ -840,16 +840,37 @@
             resetTimerUI();
         }
 
+        let isResettingTimer = false;
+
         function resetTimerUI() {
+            // Evita il loop infinito se è già in corso un reset
+            if (isResettingTimer) return;
+            isResettingTimer = true;
+            
             clearInterval(timerInterval);
-            stopAlarm();
+            stopAlarm(); // Ora può chiamare stopAlarm senza bloccarsi
             timerRunning = false;
+            timerPaused = false;
             timerBaseSeconds = 60; // ogni nuova attività riparte sempre da 60s di base
             timerCurrentSeconds = timerBaseSeconds;
+            
             document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
+            document.getElementById('hugeTimerValue').textContent = timerCurrentSeconds;
             document.getElementById('startTimerBtn').style.display = 'inline-block';
             document.getElementById('timerAddControls').style.display = 'flex';
             document.getElementById('bonusBox').style.display = 'none';
+            
+            // Ripristina l'aspetto originario del pulsante Pausa
+            let pauseBtn = document.getElementById('fsPauseBtn');
+            if (pauseBtn) {
+                pauseBtn.innerHTML = "⏸ Pausa";
+                pauseBtn.className = "btn btn-outline";
+                pauseBtn.style.background = "";
+                pauseBtn.style.color = "";
+                pauseBtn.style.border = "";
+            }
+
+            isResettingTimer = false;
         }
 
         function addTimerBlock() {
@@ -922,13 +943,23 @@
             alarmInterval = setInterval(vibrateAndPlay, 1500);
         }
 
-        function stopAlarm() {
+function stopAlarm() {
             if (alarmInterval) {
                 clearInterval(alarmInterval);
                 alarmInterval = null;
             }
             if (navigator.vibrate) navigator.vibrate(0);
+            
             document.getElementById('stopAlarmBtn').style.display = 'none';
+            document.getElementById('fsStopAlarmBtn').style.display = 'none';
+            
+            // Chiudi il timer full screen se presente
+            document.getElementById('fullscreenTimer').classList.remove('active');
+            
+            // Prepara il cronometro per l'attività successiva SOLO se non lo stiamo già resettando
+            if (!isResettingTimer) {
+                resetTimerUI();
+            }
         }
 
         function showCoopScreen() {
