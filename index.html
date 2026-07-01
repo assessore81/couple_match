@@ -908,9 +908,15 @@
             resetTimerUI();
         }
 
+        let isResettingTimer = false;
+
         function resetTimerUI() {
+            // Evita il loop infinito se è già in corso un reset
+            if (isResettingTimer) return;
+            isResettingTimer = true;
+            
             clearInterval(timerInterval);
-            stopAlarm();
+            stopAlarm(); // Ora può chiamare stopAlarm senza bloccarsi
             timerRunning = false;
             timerPaused = false;
             timerBaseSeconds = 60; // ogni nuova attività riparte sempre da 60s di base
@@ -924,11 +930,15 @@
             
             // Ripristina l'aspetto originario del pulsante Pausa
             let pauseBtn = document.getElementById('fsPauseBtn');
-            pauseBtn.innerHTML = "⏸ Pausa";
-            pauseBtn.className = "btn btn-outline";
-            pauseBtn.style.background = "";
-            pauseBtn.style.color = "";
-            pauseBtn.style.border = "";
+            if (pauseBtn) {
+                pauseBtn.innerHTML = "⏸ Pausa";
+                pauseBtn.className = "btn btn-outline";
+                pauseBtn.style.background = "";
+                pauseBtn.style.color = "";
+                pauseBtn.style.border = "";
+            }
+
+            isResettingTimer = false;
         }
 
         function addTimerBlock() {
@@ -1055,12 +1065,15 @@
             if (navigator.vibrate) navigator.vibrate(0);
             
             document.getElementById('stopAlarmBtn').style.display = 'none';
+            document.getElementById('fsStopAlarmBtn').style.display = 'none';
             
             // Chiudi il timer full screen se presente
             document.getElementById('fullscreenTimer').classList.remove('active');
             
-            // Prepara il cronometro per l'attività successiva
-            resetTimerUI();
+            // Prepara il cronometro per l'attività successiva SOLO se non lo stiamo già resettando
+            if (!isResettingTimer) {
+                resetTimerUI();
+            }
         }
 
         function showCoopScreen() {
