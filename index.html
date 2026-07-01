@@ -60,6 +60,19 @@
             text-transform: uppercase;
         }
 
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-container img {
+            max-width: 260px;
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+        }
+
         .players-setup {
             display: flex;
             justify-content: space-between;
@@ -492,7 +505,9 @@
 <body>
 
     <div class="container">
-        <img src="logo-couple-match.jpg" alt="Couple Match">
+        <div class="logo-container">
+            <img src="logo-couple-match.jpg" alt="Couple Match">
+        </div>
 
         <div class="players-setup" id="setupContainer">
             <div class="player-input-group">
