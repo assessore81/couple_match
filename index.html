@@ -295,6 +295,43 @@
             font-style: italic;
         }
 
+        /* Roulette animazione attività */
+        @keyframes rouletteFlash {
+            0%   { opacity: 0.25; transform: scaleY(0.7) translateY(-4px); }
+            40%  { opacity: 1;    transform: scaleY(1.04) translateY(0); }
+            100% { opacity: 1;    transform: scaleY(1) translateY(0); }
+        }
+        @keyframes rouletteFinalReveal {
+            0%   { opacity: 0; transform: scale(0.88); letter-spacing: 6px; }
+            60%  { opacity: 1; transform: scale(1.06); }
+            100% { opacity: 1; transform: scale(1); letter-spacing: 1.5px; }
+        }
+        .roulette-spin {
+            display: inline-block;
+            animation: rouletteFlash 0.18s ease-out both;
+            color: var(--text-color);
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        .roulette-final {
+            display: inline-block;
+            animation: rouletteFinalReveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+            color: var(--accent-color);
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.45rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+        }
+        .roulette-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
         /* Timer Globale */
         .global-timer-container {
             margin-top: 25px;
@@ -483,6 +520,8 @@
             </div>
 
             <button class="btn" id="rollBtn" onclick="rollDiceSequence()">Lancia i Dadi</button>
+            <button class="btn" id="consolationBtn" onclick="showConsolation()" style="display:none; background: linear-gradient(135deg,#9e4d78,#6d2b50); box-shadow: 0 4px 15px rgba(158,77,120,0.4);">🚨 Vedi Consolazione</button>
+            <button class="btn btn-outline" id="resumeBtn" onclick="resumeFinalRound()" style="display:none;">↩ Riprendi la Sfida</button>
         </div>
 
         <div id="winnerScreen" class="game-screen">
@@ -565,7 +604,8 @@
             },
             scores: { 1: 0, 2: 0 },
             names: { 1: "Giocatore 1", 2: "Giocatore 2" },
-            bonusGiven: false
+            bonusGiven: false,
+            pendingConsolation: null   // {loserName, activity} quando regola 3-0 è attiva
         };
 
         let timerInterval = null;
@@ -665,8 +705,101 @@
             let currentPool = gameState.pools[gameState.phase];
             if (currentPool.length === 0) return;
 
+            // Determina subito l'estratta (senza rimuoverla ancora dal pool)
             let randomIndex = Math.floor(Math.random() * currentPool.length);
-            let selected = currentPool.splice(randomIndex, 1)[0];
+            let selected = currentPool[randomIndex];
+            let receiverName = gameState.names[gameState.currentPlayer];
+
+            // Disabilita il bottone durante l'animazione
+            document.getElementById('drawBtn').disabled = true;
+            document.getElementById('historySublist').style.display = 'none';
+            document.getElementById('bonusBox').style.display = 'none';
+
+            // Avvia la roulette, poi alla fine rimuove e rivela
+            runRoulette([...currentPool], selected, receiverName, () => {
+                currentPool.splice(randomIndex, 1);
+                revealActivity(selected, receiverName);
+            });
+        }
+
+        // Roulette: scorre le attività per ~10 secondi con fake-out, poi rivela quella estratta
+        function runRoulette(poolSnapshot, selected, receiverName, onComplete) {
+            const activityEl = document.getElementById('activityText');
+
+            // Prepara pool senza l'estratta per il cycling (se c'è solo un'opzione, usa lei stessa)
+            let cycleItems = poolSnapshot.filter(i => i !== selected);
+            if (cycleItems.length === 0) cycleItems = [selected];
+
+            // Header fisso durante la roulette
+            activityEl.innerHTML =
+                `<div class="roulette-label">Estrazione in corso per ${receiverName}...</div>` +
+                `<span class="roulette-spin">${cycleItems[0]}</span>`;
+
+            // Costruisce la sequenza: cicla più volte sui pool items, poi atterrizza sull'estratta
+            let seq = [];
+            const cycles = cycleItems.length === 1 ? 12 : Math.max(3, Math.ceil(36 / cycleItems.length));
+            for (let r = 0; r < cycles; r++) {
+                let shuffled = [...cycleItems].sort(() => Math.random() - 0.5);
+                seq.push(...shuffled);
+            }
+            // Aggiunge qualche item extra per la fase di rallentamento
+            let extras = [...cycleItems].sort(() => Math.random() - 0.5).slice(0, Math.min(6, cycleItems.length));
+            seq.push(...extras);
+            // Elemento finale: l'estratta
+            seq.push(selected);
+
+            // Costruisce i ritardi (ms tra uno step e il successivo)
+            // Fase veloce: 50-90ms; rallentamento progressivo; fake-out; atterraggio
+            let delays = [];
+            let fastCount = Math.floor(seq.length * 0.60);
+            let slowCount = seq.length - fastCount - 1; // -1 per l'ultimo
+
+            for (let i = 0; i < fastCount; i++) {
+                delays.push(55 + Math.random() * 40);
+            }
+            // Rallentamento con fake-out casuali
+            for (let i = 0; i < slowCount; i++) {
+                let t = i / Math.max(slowCount - 1, 1);
+                let base = 110 + t * 520; // da 110ms a 630ms
+                if (i < slowCount - 4 && Math.random() < 0.28) {
+                    // Fake-out: rallenta tantissimo poi riparte
+                    delays.push(base * 2.2);
+                    delays.push(base * 0.55);
+                    i++; // salta uno step nel conteggio
+                } else {
+                    delays.push(base + (Math.random() - 0.5) * 70);
+                }
+            }
+            // Step finale (l'estratta): pausa drammatica
+            delays.push(850);
+
+            let stepIdx = 0;
+
+            function step() {
+                const item = seq[stepIdx];
+                const isFinal = stepIdx === seq.length - 1;
+
+                if (isFinal) {
+                    activityEl.innerHTML =
+                        `<div class="roulette-label">${receiverName} riceve:</div>` +
+                        `<span class="roulette-final">${item}</span>`;
+                    setTimeout(onComplete, 550);
+                } else {
+                    // Ricrea il nodo per far ripartire l'animazione CSS ad ogni step
+                    activityEl.innerHTML =
+                        `<div class="roulette-label">Estrazione in corso per ${receiverName}...</div>` +
+                        `<span class="roulette-spin">${item}</span>`;
+                    stepIdx++;
+                    setTimeout(step, delays[stepIdx]);
+                }
+            }
+
+            setTimeout(step, delays[0]);
+        }
+
+        // Rivela l'attività dopo la roulette e gestisce bonus/timer/stato
+        function revealActivity(selected, receiverName) {
+            const activityEl = document.getElementById('activityText');
             let displayTxt = selected;
 
             document.getElementById('historySublist').style.display = 'none';
@@ -678,19 +811,18 @@
                 document.getElementById('historySublist').style.display = 'block';
             }
 
-            let receiverName = gameState.names[gameState.currentPlayer];
-            document.getElementById('activityText').innerHTML =
+            activityEl.innerHTML =
                 `<div class="receiver-text">${receiverName} riceve:</div>` + displayTxt;
 
             // Estrazione bonus in parallelo
             rollBonus();
-
             showTimerGlobal();
 
             gameState.drawsLeft--;
             document.getElementById('remDrawsIndicator').textContent = `Pescate rimaste: ${gameState.drawsLeft}`;
             gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
             updateTurnIndicator();
+            document.getElementById('drawBtn').disabled = false;
 
             if (gameState.drawsLeft === 0) {
                 document.getElementById('drawBtn').textContent = "Vedi Attività di Coppia";
@@ -896,32 +1028,64 @@
             let winnerName = gameState.names[winner];
             let loser = winner === 1 ? 2 : 1;
             let loserScore = gameState.scores[loser];
-            
-            // Controllo Regola di Consolazione 3-0
+
+            // Mostra sempre prima l'attività normale del punto conquistato
+            let activity = finalSequence[currentScore - 1] || "";
+            if (currentScore <= 3 && activity) {
+                document.getElementById('finalActivityCard').classList.remove('bonus-card');
+                document.getElementById('finalActivityText').innerHTML =
+                    `<strong>Punto per ${winnerName}! 🎯</strong><br>` +
+                    `Attività del ${currentScore}° Punto:<br>` +
+                    `<span style='color:var(--accent-color); font-size:1.4rem;'>${activity}</span>`;
+                timerBaseSeconds = 60;
+                showTimerGlobal();
+            }
+
+            // Se si è raggiunto il 3-0, imposta la consolazione pendente
+            // (verrà mostrata DOPO aver eseguito l'attività del 3° punto)
             if (currentScore === 3 && loserScore === 0 && !gameState.bonusGiven) {
                 gameState.bonusGiven = true;
-                let loserName = gameState.names[loser];
-                let bonusActivity = finalSequence[0]; // Punto 1
-                
-                document.getElementById('finalActivityCard').classList.add('bonus-card');
-                document.getElementById('finalActivityText').innerHTML = 
-                    `<strong>Punto per ${winnerName}, MA... 🚨 ATTENZIONE!</strong><br>` +
-                    `<span style="font-size:0.9rem">Siamo sul 3-0. ${loserName} riceve una consolazione immediata prima di proseguire!</span><br><br>` +
-                    `<strong>${loserName}, esegui:</strong><br>` +
-                    `<span style='color:#ffd700; font-size:1.4rem;'>${bonusActivity}</span>`;
-                
-                timerBaseSeconds = 60;
-                showTimerGlobal();
-                return; // Interrompe il normale annuncio del punto per mostrare la consolazione
+                gameState.pendingConsolation = {
+                    loserName: gameState.names[loser],
+                    activity: finalSequence[0]   // attività del 1° punto per chi è a 0
+                };
+                // Nasconde il tasto lancia-dadi e mostra il tasto consolazione
+                document.getElementById('rollBtn').style.display = 'none';
+                document.getElementById('consolationBtn').style.display = 'inline-block';
+                // Avviso sotto l'attività corrente
+                document.getElementById('finalActivityText').innerHTML +=
+                    `<br><small style="color:#e5b3cb; font-size:0.82rem; display:block; margin-top:8px;">` +
+                    `⚠️ Dopo questa attività clicca su "Vedi Consolazione" per ${gameState.names[loser]}</small>`;
             }
-            
-            // Comportamento Standard
-            let activity = finalSequence[currentScore - 1] || "Preparati al gran finale!";
-            if (currentScore <= 3) {
-                document.getElementById('finalActivityText').innerHTML = `<strong>Punto per ${winnerName}! 🎯</strong><br>Esegui l'attività del ${currentScore}° Punto:<br><span style='color:var(--accent-color); font-size:1.4rem;'>${activity}</span>`;
-                timerBaseSeconds = 60;
-                showTimerGlobal();
-            }
+        }
+
+        // Mostra la consolazione per chi è rimasto a 0 nel 3-0
+        function showConsolation() {
+            const c = gameState.pendingConsolation;
+            gameState.pendingConsolation = null;
+
+            document.getElementById('consolationBtn').style.display = 'none';
+            hideTimerGlobal();
+
+            document.getElementById('finalActivityCard').classList.add('bonus-card');
+            document.getElementById('finalActivityText').innerHTML =
+                `🚨 <strong>CONSOLAZIONE per ${c.loserName}!</strong><br>` +
+                `<span style='font-size:0.88rem; color:#e5b3cb;'>Siete sul 3-0: prima di riprendere eseguila!</span><br><br>` +
+                `<span style='color:#ffd700; font-size:1.5rem;'>${c.activity}</span>`;
+
+            timerBaseSeconds = 60;
+            showTimerGlobal();
+            document.getElementById('resumeBtn').style.display = 'inline-block';
+        }
+
+        // Riprende la sfida dopo la consolazione 3-0
+        function resumeFinalRound() {
+            document.getElementById('resumeBtn').style.display = 'none';
+            document.getElementById('finalActivityCard').classList.remove('bonus-card');
+            hideTimerGlobal();
+            document.getElementById('finalActivityText').innerHTML =
+                `<strong>Riprendete la sfida!</strong><br>Lanciate i dadi per il prossimo punto.`;
+            document.getElementById('rollBtn').style.display = 'inline-block';
         }
 
         function updateFinalActivityText() {
@@ -973,7 +1137,12 @@
             };
             gameState.scores = { 1: 0, 2: 0 };
             gameState.bonusGiven = false;
+            gameState.pendingConsolation = null;
             timerBaseSeconds = 60;
+
+            document.getElementById('rollBtn').style.display = 'inline-block';
+            document.getElementById('consolationBtn').style.display = 'none';
+            document.getElementById('resumeBtn').style.display = 'none';
 
             document.getElementById('phaseIndicator').textContent = "Fase: 1";
             document.getElementById('remDrawsIndicator').textContent = "Pescate rimaste: 4";
