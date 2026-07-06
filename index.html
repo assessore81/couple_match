@@ -729,7 +729,7 @@
             "MASTURBA CON MANI E BOCCA"
         ];
 
-        // Definizione dei bonus estraibili (30% di probabilità di ottenerne uno)
+        // Definizione dei bonus estraibili (40% di probabilità di ottenerne uno)
         const bonusPool = [
             { id: "plus10", label: "+10 secondi", type: "time", seconds: 10 },
             { id: "plus20", label: "+20 secondi", type: "time", seconds: 20 },
@@ -824,9 +824,9 @@
             switchScreen('drawScreen');
         }
 
-        // --- Estrazione bonus parallela (30% di probabilità) ---
+        // --- Estrazione bonus parallela (40% di probabilità) ---
         function rollBonus() {
-            const triggered = Math.random() < 0.30;
+            const triggered = Math.random() < 0.40;
             const bonusBox = document.getElementById('bonusBox');
             bonusBox.style.display = 'block';
 
