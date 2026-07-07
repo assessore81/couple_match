@@ -338,6 +338,76 @@
             font-style: italic;
         }
 
+        /* Tag "shottino opzionale" per le attività di coppia in comune */
+        .shot-tag {
+            margin: 18px auto 0;
+            padding: 10px 18px;
+            border-radius: 50px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-color);
+            background: linear-gradient(135deg, rgba(212,163,115,0.18), rgba(114,60,90,0.22));
+            border: 1px solid rgba(212,163,115,0.45);
+            letter-spacing: 0.3px;
+        }
+
+        .shot-tag .shot-icon {
+            font-size: 1.1rem;
+        }
+
+        /* Fase Evento: modificatore di gameplay attivo per 2 pescate */
+        .phase-event-box {
+            margin-bottom: 18px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1.5px solid #ffd700;
+            background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(114,60,90,0.15));
+            text-align: center;
+            animation: fadeIn 0.4s ease, eventPulse 2.4s ease-in-out infinite;
+        }
+
+        .phase-event-box.no-event {
+            border-color: rgba(160, 135, 150, 0.3);
+            background: rgba(255,255,255,0.02);
+            animation: fadeIn 0.4s ease;
+        }
+
+        .phase-event-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: #ffd700;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .phase-event-box.no-event .phase-event-label {
+            color: var(--text-muted);
+        }
+
+        .phase-event-text {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-color);
+            letter-spacing: 0.3px;
+        }
+
+        .phase-event-box.no-event .phase-event-text {
+            font-style: italic;
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        @keyframes eventPulse {
+            0%, 100% { box-shadow: 0 0 0 rgba(255,215,0,0); }
+            50% { box-shadow: 0 0 14px rgba(255,215,0,0.35); }
+        }
+
         /* Roulette animazione attività */
         @keyframes rouletteFlash {
             0%   { opacity: 0.25; transform: scaleY(0.7) translateY(-4px); }
@@ -582,6 +652,11 @@
                 <div id="historySublist" class="history-list" style="display:none;"></div>
             </div>
             <div id="bonusBox" class="bonus-box" style="display:none;"></div>
+
+            <div id="phaseEventBox" class="phase-event-box" style="display:none;">
+                <div class="phase-event-label">⚡ FASE EVENTO - VALIDA PER LE PROSSIME DUE ATTIVITA'</div>
+                <div class="phase-event-text" id="phaseEventText">-</div>
+            </div>
         </div>
 
         <div id="coopScreen" class="game-screen">
@@ -591,6 +666,7 @@
             <div class="activity-card" style="border-style: solid; border-color: var(--accent-color);">
                 <div id="coopActivityText">ATTIVITÀ IN COMUNE</div>
             </div>
+            <div class="shot-tag"><span class="shot-icon">🥃</span> Potete bere (opzionalmente) uno shottino di coppia</div>
             <button class="btn" onclick="nextPhase()">Procedi alla prossima fase</button>
         </div>
 
@@ -734,9 +810,21 @@
             { id: "plus10", label: "+10 secondi", type: "time", seconds: 10 },
             { id: "plus20", label: "+20 secondi", type: "time", seconds: 20 },
             { id: "kiss", label: "Aggiungi bacio", type: "choice", fallbackLabel: "+10 secondi", fallbackSeconds: 10 },
-            { id: "blindfold", label: "Ricevi attività da bendato", type: "choice", fallbackLabel: "+10 secondi", fallbackSeconds: 10 },
             { id: "lube", label: "Aggiungi lubrificante", type: "choice", fallbackLabel: "+10 secondi", fallbackSeconds: 10 },
-            { id: "silence", label: "Chi riceve non deve emettere nessun rumore, oppure l'attività si interrompe", type: "rule" }
+            { id: "shot", label: "Bevi uno shottino di coppia", type: "choice", fallbackLabel: "+10 secondi", fallbackSeconds: 10 }
+        ];
+
+        // Definizione delle "Fase Evento": modificatori di gameplay estratti subito dopo la rivelazione
+        // dell'attività della 3° pescata di ogni fase, validi per la 3° e 4° pescata (50% di probabilità di estrazione)
+        const phaseEventPool = [
+            "Chi riceve deve ricambiare piacere alla controparte",
+            "Chi riceve può usare le mani sulla controparte",
+            "Chi riceve deve stare in piedi",
+            "Chi riceve deve stare seduto",
+            "Chi riceve può usare il vibratore sulla controparte",
+            "Le mani di chi riceve devono essere dietro la schiena",
+            "Chi riceve deve rimanere in silenzio",
+            "Chi riceve deve essere bendato"
         ];
 
         let gameState = {
@@ -752,7 +840,8 @@
             names: { 1: "Giocatore 1", 2: "Giocatore 2" },
             genders: { 1: "donna", 2: "uomo" },
             bonusGiven: false,
-            pendingConsolation: null   // {loserName, activity} quando regola 3-0 è attiva
+            pendingConsolation: null,  // {loserName, activity} quando regola 3-0 è attiva
+            currentPhaseEvent: null    // testo della Fase Evento attiva (valida per pescate 3 e 4), o null
         };
 
         let timerInterval = null;
@@ -854,6 +943,26 @@
             }
             timerCurrentSeconds = timerBaseSeconds;
             document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
+        }
+
+        // --- Fase Evento: estratta dopo la 3° pescata, solo nelle fasi 2 e 3 (la fase 1 ha attività soft, l'evento non ha senso). Estrazione sempre garantita (no percentuale) ---
+        function rollPhaseEvent() {
+            // Nella fase 1 non si estrae alcun evento
+            if (gameState.phase === 1) {
+                gameState.currentPhaseEvent = null;
+                document.getElementById('phaseEventBox').style.display = 'none';
+                return;
+            }
+
+            const box = document.getElementById('phaseEventBox');
+            const textEl = document.getElementById('phaseEventText');
+
+            box.style.display = 'block';
+
+            const chosen = phaseEventPool[Math.floor(Math.random() * phaseEventPool.length)];
+            gameState.currentPhaseEvent = chosen;
+            box.classList.remove('no-event');
+            textEl.textContent = chosen;
         }
 
         function drawActivity() {
@@ -988,6 +1097,11 @@
             gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
             updateTurnIndicator();
             document.getElementById('drawBtn').disabled = false;
+
+            // Dopo la 3° pescata della fase, estrae la Fase Evento valida per le pescate 3 e 4
+            if (gameState.drawsLeft === 1) {
+                rollPhaseEvent();
+            }
 
             if (gameState.drawsLeft === 0) {
                 document.getElementById('drawBtn').textContent = "Vedi Attività di Coppia";
@@ -1192,6 +1306,10 @@
                 updateFinalActivityText();
             } else {
                 gameState.drawsLeft = 4;
+                gameState.currentPhaseEvent = null;
+                const eventBox = document.getElementById('phaseEventBox');
+                eventBox.style.display = 'none';
+                eventBox.classList.remove('no-event');
                 document.getElementById('activityText').textContent = `Fase ${gameState.phase} pronta. Clicca su "Pesca Attività".`;
                 document.getElementById('drawBtn').textContent = "Pesca Attività";
                 document.getElementById('drawBtn').setAttribute('onclick', 'drawActivity()');
@@ -1380,6 +1498,7 @@
             gameState.scores = { 1: 0, 2: 0 };
             gameState.bonusGiven = false;
             gameState.pendingConsolation = null;
+            gameState.currentPhaseEvent = null;
             timerBaseSeconds = 60;
 
             document.getElementById('rollBtn').style.display = 'inline-block';
@@ -1391,6 +1510,8 @@
             document.getElementById('activityText').textContent = "Clicca su \"Pesca Attività\" per iniziare il match";
             document.getElementById('historySublist').style.display = 'none';
             document.getElementById('bonusBox').style.display = 'none';
+            document.getElementById('phaseEventBox').style.display = 'none';
+            document.getElementById('phaseEventBox').classList.remove('no-event');
             document.getElementById('drawBtn').textContent = "Pesca Attività";
             document.getElementById('drawBtn').setAttribute('onclick', 'drawActivity()');
             
