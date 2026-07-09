@@ -164,13 +164,34 @@
             letter-spacing: 1px;
         }
 
+        /* ===== Screen carousel (sistema a scorrimento orizzontale) ===== */
+        .screens-viewport {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .screens-track {
+            display: flex;
+            width: 100%;
+            transition: transform 0.42s cubic-bezier(0.65, 0, 0.35, 1), min-height 0.3s ease;
+            align-items: flex-start;
+        }
+
         .game-screen {
-            display: none;
+            display: block;
+            width: 100%;
+            flex: 0 0 100%;
+            opacity: 0;
+            transform: scale(0.97);
+            transition: opacity 0.32s ease, transform 0.32s ease;
+            pointer-events: none;
         }
 
         .game-screen.active {
-            display: block;
-            animation: fadeIn 0.5s ease;
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
         }
 
         .btn {
@@ -184,7 +205,7 @@
             cursor: pointer;
             width: 100%;
             margin-top: 15px;
-            transition: transform 0.2s, opacity 0.2s;
+            transition: transform 0.15s ease, opacity 0.2s, box-shadow 0.2s;
             box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3);
         }
 
@@ -195,7 +216,8 @@
         }
 
         .btn:active:not(:disabled) {
-            transform: scale(0.98);
+            transform: scale(0.96);
+            box-shadow: 0 2px 8px rgba(212, 163, 115, 0.25);
         }
 
         .btn-outline {
@@ -287,6 +309,44 @@
             letter-spacing: 0.3px;
         }
 
+        /* Tasto Riprendi Partita */
+        .resume-banner {
+            display: none;
+            background: rgba(212, 163, 115, 0.08);
+            border: 1px solid var(--accent-color);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 18px;
+            text-align: left;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .resume-banner.active {
+            display: block;
+        }
+
+        .resume-banner .resume-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 4px;
+        }
+
+        .resume-banner .resume-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .resume-banner-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .resume-banner-actions .btn {
+            margin-top: 0;
+        }
+
         /* Sorteggio chi inizia */
         .starter-draw-box {
             background: rgba(212, 163, 115, 0.08);
@@ -328,7 +388,18 @@
             border: 1px solid var(--bonus-color);
             background: rgba(114, 60, 90, 0.15);
             color: #e5b3cb;
-            animation: fadeIn 0.4s ease;
+            opacity: 0;
+            transform: scale(0.9) translateY(6px);
+        }
+
+        .bonus-box.bonus-pop {
+            animation: bonusPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes bonusPop {
+            0% { opacity: 0; transform: scale(0.85) translateY(10px); }
+            55% { opacity: 1; transform: scale(1.04) translateY(-2px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         .bonus-box.no-bonus {
@@ -467,6 +538,22 @@
             display: flex;
             gap: 8px;
             margin-bottom: 10px;
+        }
+
+        .wake-lock-indicator {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            transition: opacity 0.3s ease;
+            letter-spacing: 0.5px;
+        }
+
+        .wake-lock-indicator.active {
+            opacity: 0.85;
+            height: auto;
+            margin-bottom: 8px;
         }
         
         /* Overlay Fullscreen Timer */
@@ -622,6 +709,18 @@
             </div>
         </div>
 
+        <div id="resumeBanner" class="resume-banner">
+            <div class="resume-title">🔖 Partita in corso trovata</div>
+            <div class="resume-sub" id="resumeSubText">Riprendi da dove avevi lasciato, oppure inizia una nuova partita.</div>
+            <div class="resume-banner-actions">
+                <button class="btn btn-small" style="flex:1; margin:0;" onclick="resumeSavedGame()">▶ Riprendi Partita</button>
+                <button class="btn btn-outline btn-small" style="flex:1; margin:0;" onclick="discardSavedGame()">Nuova Partita</button>
+            </div>
+        </div>
+
+        <div class="screens-viewport">
+        <div class="screens-track" id="screensTrack">
+
         <div id="welcomeScreen" class="game-screen active">
             <div class="welcome-screen-inner">
                 <p class="welcome-tagline">Il gioco per accendere la serata ✨</p>
@@ -719,9 +818,13 @@
             <button class="btn" onclick="resetGame(true)">Gioca Ancora</button>
         </div>
 
+        </div>
+        </div>
+
         <div id="globalTimer" class="global-timer-container">
             <div class="timer-circle" id="timerDisplay">60</div>
             <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Tempo per l'attività!</div>
+            <div class="wake-lock-indicator" id="wakeLockIndicator">🔒 Schermo mantenuto attivo</div>
             <div class="timer-add-controls" id="timerAddControls">
                 <button class="btn btn-outline btn-small" onclick="addTimerBlock()">+10 secondi</button>
                 <button class="btn btn-outline btn-small" onclick="restoreTimerDefault()">↺ Ripristina 60s</button>
@@ -741,7 +844,8 @@
     <div id="fullscreenTimer" class="fullscreen-timer-overlay">
         <div style="font-size:1.5rem; color:var(--text-muted); margin-bottom:10px; text-transform:uppercase; letter-spacing:2px; text-align: center;">Tempo Rimanente</div>
         <div id="hugeTimerValue" class="huge-timer-display">60</div>
-        
+        <div class="wake-lock-indicator" id="wakeLockIndicatorFs" style="text-align:center;">🔒 Schermo mantenuto attivo</div>
+
         <div class="timer-controls-group" id="fsTimerRunningControls">
             <button class="btn btn-outline" id="fsPauseBtn" onclick="togglePauseTimer()">⏸ Pausa</button>
             <button class="btn btn-danger" onclick="exitTimerFullscreen()">⏹ Termina</button>
@@ -841,7 +945,8 @@
             genders: { 1: "donna", 2: "uomo" },
             bonusGiven: false,
             pendingConsolation: null,  // {loserName, activity} quando regola 3-0 è attiva
-            currentPhaseEvent: null    // testo della Fase Evento attiva (valida per pescate 3 e 4), o null
+            currentPhaseEvent: null,   // testo della Fase Evento attiva (valida per pescate 3 e 4), o null
+            currentScreen: "welcomeScreen" // schermata attualmente attiva, usata per persistenza e carousel
         };
 
         let timerInterval = null;
@@ -850,6 +955,135 @@
         let timerCurrentSeconds = 60;
         let timerRunning = false;
         let timerPaused = false; // Gestione pausa per il full screen timer
+
+        /* ============================================================
+           1) SALVATAGGIO DELLO STATO (LocalStorage)
+           ============================================================ */
+        const SAVE_KEY = "coupleMatchSaveV1";
+
+        // Schermate che rappresentano un salvataggio "significativo" da poter riprendere.
+        // Non salviamo lo stato "welcomeScreen" iniziale (nessun progresso da riprendere)
+        // né la schermata finale "winnerScreen" (partita conclusa).
+        const RESUMABLE_SCREENS = ["starterDrawScreen", "drawScreen", "coopScreen", "finalScreen"];
+
+        function saveState() {
+            try {
+                if (!RESUMABLE_SCREENS.includes(gameState.currentScreen)) {
+                    // Partita non ancora iniziata o già conclusa: nessun salvataggio da mantenere
+                    localStorage.removeItem(SAVE_KEY);
+                    return;
+                }
+                const payload = {
+                    version: 1,
+                    savedAt: Date.now(),
+                    gameState: gameState
+                };
+                localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+            } catch (e) {
+                console.log("Impossibile salvare lo stato:", e);
+            }
+        }
+
+        function loadSavedState() {
+            try {
+                const raw = localStorage.getItem(SAVE_KEY);
+                if (!raw) return null;
+                const payload = JSON.parse(raw);
+                if (!payload || !payload.gameState) return null;
+                return payload;
+            } catch (e) {
+                console.log("Salvataggio corrotto, verrà ignorato:", e);
+                return null;
+            }
+        }
+
+        function clearSavedState() {
+            try {
+                localStorage.removeItem(SAVE_KEY);
+            } catch (e) { /* noop */ }
+        }
+
+        // Controlla all'avvio se esiste un salvataggio precedente e mostra il banner "Riprendi Partita"
+        function checkForSavedGame() {
+            const payload = loadSavedState();
+            const banner = document.getElementById('resumeBanner');
+            if (!payload) {
+                banner.classList.remove('active');
+                return;
+            }
+            const gs = payload.gameState;
+            const subEl = document.getElementById('resumeSubText');
+            let phaseLabel = gs.currentScreen === 'finalScreen' ? "Fase Finale" : `Fase ${gs.phase}`;
+            let n1 = (gs.names && gs.names[1]) ? gs.names[1] : "Giocatore 1";
+            let n2 = (gs.names && gs.names[2]) ? gs.names[2] : "Giocatore 2";
+            subEl.textContent = `${n1} & ${n2} — ${phaseLabel}. Riprendi da dove avevi lasciato, oppure inizia una nuova partita.`;
+            banner.classList.add('active');
+        }
+
+        function resumeSavedGame() {
+            const payload = loadSavedState();
+            if (!payload) { checkForSavedGame(); return; }
+
+            gameState = Object.assign({}, gameState, payload.gameState);
+
+            document.getElementById('resumeBanner').classList.remove('active');
+
+            // Ripristina i campi nome/genere
+            document.getElementById('p1Name').value = gameState.names[1];
+            document.getElementById('p2Name').value = gameState.names[2];
+            document.querySelector(`input[name="p1Gender"][value="${gameState.genders[1]}"]`).checked = true;
+            document.querySelector(`input[name="p2Gender"][value="${gameState.genders[2]}"]`).checked = true;
+            updateNames();
+
+            // Ripristina UI in base alla schermata salvata
+            document.getElementById('phaseIndicator').textContent = `Fase: ${gameState.phase}`;
+            document.getElementById('remDrawsIndicator').textContent = `Pescate rimaste: ${gameState.drawsLeft}`;
+            document.getElementById('p1Score').textContent = gameState.scores[1];
+            document.getElementById('p2Score').textContent = gameState.scores[2];
+
+            if (gameState.currentScreen === 'drawScreen') {
+                document.getElementById('activityText').textContent = `Fase ${gameState.phase} — riprendi pescando la prossima attività.`;
+                if (gameState.drawsLeft === 0) {
+                    document.getElementById('drawBtn').textContent = "Vedi Attività di Coppia";
+                    document.getElementById('drawBtn').setAttribute('onclick', 'showCoopScreen()');
+                } else {
+                    document.getElementById('drawBtn').textContent = "Pesca Attività";
+                    document.getElementById('drawBtn').setAttribute('onclick', 'drawActivity()');
+                }
+                const eventBox = document.getElementById('phaseEventBox');
+                if (gameState.currentPhaseEvent) {
+                    eventBox.style.display = 'block';
+                    eventBox.classList.remove('no-event');
+                    document.getElementById('phaseEventText').textContent = gameState.currentPhaseEvent;
+                } else {
+                    eventBox.style.display = 'none';
+                }
+                switchScreen('drawScreen');
+            } else if (gameState.currentScreen === 'coopScreen') {
+                document.getElementById('coopActivityText').innerHTML = coopActivities[gameState.phase];
+                switchScreen('coopScreen');
+            } else if (gameState.currentScreen === 'finalScreen') {
+                document.getElementById('setupContainer').style.display = 'none';
+                updateFinalActivityText();
+                if (gameState.pendingConsolation) {
+                    document.getElementById('rollBtn').style.display = 'none';
+                    document.getElementById('consolationBtn').style.display = 'inline-block';
+                } else {
+                    document.getElementById('rollBtn').style.display = 'inline-block';
+                    document.getElementById('consolationBtn').style.display = 'none';
+                }
+                switchScreen('finalScreen');
+            } else if (gameState.currentScreen === 'starterDrawScreen') {
+                startPhaseDraw();
+            } else {
+                switchScreen('welcomeScreen');
+            }
+        }
+
+        function discardSavedGame() {
+            clearSavedState();
+            document.getElementById('resumeBanner').classList.remove('active');
+        }
 
         function updateNames() {
             gameState.names[1] = document.getElementById('p1Name').value || "Giocatore 1";
@@ -863,6 +1097,7 @@
             document.querySelectorAll('.p1Label').forEach(el => el.textContent = gameState.names[1]);
             document.querySelectorAll('.p2Label').forEach(el => el.textContent = gameState.names[2]);
             updateTurnIndicator();
+            saveState();
         }
 
         function updateTurnIndicator() {
@@ -883,9 +1118,11 @@
             document.getElementById('runDrawBtn').style.display = 'inline-block';
             document.getElementById('runDrawBtn').disabled = false;
             document.getElementById('confirmStarterBtn').style.display = 'none';
+            saveState();
         }
 
         function runStarterDraw() {
+            if (navigator.vibrate) navigator.vibrate(15);
             const nameEl = document.getElementById('starterWinnerName');
             const runBtn = document.getElementById('runDrawBtn');
             const confirmBtn = document.getElementById('confirmStarterBtn');
@@ -902,6 +1139,8 @@
                     nameEl.textContent = `${gameState.names[gameState.currentPlayer]} inizia! 🎲`;
                     runBtn.style.display = 'none';
                     confirmBtn.style.display = 'inline-block';
+                    if (navigator.vibrate) navigator.vibrate([40, 40, 80]);
+                    saveState();
                 }
             }, 150);
         }
@@ -911,6 +1150,7 @@
             document.getElementById('phaseIndicator').textContent = `Fase: ${gameState.phase}`;
             document.getElementById('remDrawsIndicator').textContent = `Pescate rimaste: ${gameState.drawsLeft}`;
             switchScreen('drawScreen');
+            saveState();
         }
 
         // --- Estrazione bonus parallela (40% di probabilità) ---
@@ -918,10 +1158,14 @@
             const triggered = Math.random() < 0.40;
             const bonusBox = document.getElementById('bonusBox');
             bonusBox.style.display = 'block';
+            // Riavvia l'animazione di comparsa ad ogni estrazione
+            bonusBox.classList.remove('bonus-pop');
+            void bonusBox.offsetWidth; // force reflow per far ripartire la keyframe animation
 
             if (!triggered) {
                 bonusBox.classList.add('no-bonus');
                 bonusBox.innerHTML = "🎲 Peccato Nessun Bonus";
+                bonusBox.classList.add('bonus-pop');
                 timerBaseSeconds = 60;
                 timerCurrentSeconds = 60;
                 document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
@@ -930,6 +1174,8 @@
 
             bonusBox.classList.remove('no-bonus');
             const chosen = bonusPool[Math.floor(Math.random() * bonusPool.length)];
+
+            if (navigator.vibrate) navigator.vibrate([30, 60, 30, 60, 90]);
 
             if (chosen.type === "time") {
                 timerBaseSeconds = 60 + chosen.seconds;
@@ -941,6 +1187,7 @@
                 timerBaseSeconds = 60;
                 bonusBox.innerHTML = `✨ <strong>BONUS!</strong> ${chosen.label} <span style="opacity:0.7">oppure ${chosen.fallbackLabel}</span>`;
             }
+            bonusBox.classList.add('bonus-pop');
             timerCurrentSeconds = timerBaseSeconds;
             document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
         }
@@ -963,6 +1210,7 @@
             gameState.currentPhaseEvent = chosen;
             box.classList.remove('no-event');
             textEl.textContent = chosen;
+            saveState();
         }
 
         function drawActivity() {
@@ -985,6 +1233,8 @@
 
             // Risolve l'intero pool nel testo corretto per il genere di chi riceve (usato per la roulette)
             let resolvedPool = currentPool.map(item => activityLabel(item, receiverGender));
+
+            if (navigator.vibrate) navigator.vibrate(10);
 
             // Avvia la roulette, poi alla fine rimuove e rivela
             runRoulette(resolvedPool, selectedText, receiverName, () => {
@@ -1054,6 +1304,7 @@
                     activityEl.innerHTML =
                         `<div class="roulette-label">${receiverName} riceve:</div>` +
                         `<span class="roulette-final">${item}</span>`;
+                    if (navigator.vibrate) navigator.vibrate([50, 30, 90]);
                     setTimeout(onComplete, 550);
                 } else {
                     // Ricrea il nodo per far ripartire l'animazione CSS ad ogni step
@@ -1107,7 +1358,60 @@
                 document.getElementById('drawBtn').textContent = "Vedi Attività di Coppia";
                 document.getElementById('drawBtn').setAttribute('onclick', 'showCoopScreen()');
             }
+
+            saveState();
         }
+
+        /* ============================================================
+           2) MIGLIORAMENTO UX TIMER — Screen Wake Lock API
+           ============================================================ */
+        let wakeLock = null;
+
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    wakeLock.addEventListener('release', () => {
+                        setWakeLockIndicator(false);
+                    });
+                    setWakeLockIndicator(true);
+                } else {
+                    console.log("Wake Lock API non supportata su questo browser.");
+                }
+            } catch (err) {
+                // Puo' fallire se la tab non e' visibile o per permessi: non blocchiamo il gioco
+                console.log(`Wake Lock non ottenuto: ${err.name}, ${err.message}`);
+                setWakeLockIndicator(false);
+            }
+        }
+
+        async function releaseWakeLock() {
+            try {
+                if (wakeLock) {
+                    await wakeLock.release();
+                    wakeLock = null;
+                }
+            } catch (e) { /* noop */ }
+            setWakeLockIndicator(false);
+        }
+
+        function setWakeLockIndicator(active) {
+            const el1 = document.getElementById('wakeLockIndicator');
+            const el2 = document.getElementById('wakeLockIndicatorFs');
+            [el1, el2].forEach(el => {
+                if (!el) return;
+                if (active) el.classList.add('active');
+                else el.classList.remove('active');
+            });
+        }
+
+        // Se il device rilascia il wake lock automaticamente (es. tab in background)
+        // lo richiediamo di nuovo appena la pagina torna visibile, se il timer è ancora attivo
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible' && timerRunning && !timerPaused) {
+                await requestWakeLock();
+            }
+        });
 
         // --- Logica Timer Globale e Fullscreen ---
         function showTimerGlobal() {
@@ -1132,6 +1436,7 @@
             timerPaused = false;
             timerBaseSeconds = 60; // ogni nuova attività riparte sempre da 60s di base
             timerCurrentSeconds = timerBaseSeconds;
+            releaseWakeLock();
             
             document.getElementById('timerDisplay').textContent = timerCurrentSeconds;
             document.getElementById('hugeTimerValue').textContent = timerCurrentSeconds;
@@ -1172,6 +1477,9 @@
             if (timerRunning) return;
             timerRunning = true;
             timerPaused = false;
+
+            // Richiede il Wake Lock per impedire allo schermo di spegnersi durante il timer
+            requestWakeLock();
             
             // Nascondi i controlli nella pagina base
             document.getElementById('startTimerBtn').style.display = 'none';
@@ -1210,12 +1518,15 @@
                 pauseBtn.style.background = "var(--success-color)";
                 pauseBtn.style.color = "var(--text-color)";
                 pauseBtn.style.border = "none";
+                // In pausa non serve tenere lo schermo sveglio a tutti i costi, ma lo lasciamo attivo
+                // per evitare che si spenga mentre la coppia decide di riprendere.
             } else {
                 pauseBtn.innerHTML = "⏸ Pausa";
                 pauseBtn.className = "btn btn-outline";
                 pauseBtn.style.background = "transparent";
                 pauseBtn.style.color = "var(--accent-color)";
                 pauseBtn.style.border = "2px solid var(--accent-color)";
+                if (wakeLock === null) requestWakeLock();
             }
         }
 
@@ -1294,6 +1605,7 @@
             timerBaseSeconds = 60;
             resetTimerUI();
             showTimerGlobal();
+            saveState();
         }
 
         function nextPhase() {
@@ -1304,6 +1616,7 @@
                 document.getElementById('setupContainer').style.display = 'none';
                 switchScreen('finalScreen');
                 updateFinalActivityText();
+                saveState();
             } else {
                 gameState.drawsLeft = 4;
                 gameState.currentPhaseEvent = null;
@@ -1349,6 +1662,7 @@
                 d1.classList.remove('rolling');
                 let v1 = Math.floor(Math.random() * 6) + 1;
                 d1.textContent = v1;
+                if (navigator.vibrate) navigator.vibrate(20);
 
                 document.getElementById('finalActivityText').innerHTML =
                     `<strong>${p1Name} ha fatto ${v1}!</strong><br>Ora tocca a ${p2Name}... 🎲`;
@@ -1361,6 +1675,7 @@
                         d2.classList.remove('rolling');
                         let v2 = Math.floor(Math.random() * 6) + 1;
                         d2.textContent = v2;
+                        if (navigator.vibrate) navigator.vibrate(20);
 
                         if (v1 > v2) {
                             gameState.scores[1]++;
@@ -1378,6 +1693,7 @@
                         checkGameEnd();
                         btn.disabled = false;
                         diceRollInProgress = false;
+                        saveState();
                     }, 800);
                 }, 700);
             }, 800);
@@ -1436,6 +1752,7 @@
             timerBaseSeconds = 60;
             showTimerGlobal();
             document.getElementById('resumeBtn').style.display = 'inline-block';
+            saveState();
         }
 
         // Riprende la sfida dopo la consolazione 3-0
@@ -1446,6 +1763,7 @@
             document.getElementById('finalActivityText').innerHTML =
                 `<strong>Riprendete la sfida!</strong><br>Lanciate i dadi per il prossimo punto.`;
             document.getElementById('rollBtn').style.display = 'inline-block';
+            saveState();
         }
 
         function updateFinalActivityText() {
@@ -1462,13 +1780,28 @@
                 setTimeout(() => {
                     document.getElementById('globalResetBtn').style.display = 'none';
                     switchScreen('winnerScreen');
+                    // Partita conclusa: rimuoviamo il salvataggio, non ha più senso riprenderla
+                    clearSavedState();
                 }, 2000); // Leggero ritardo per far leggere l'ultimo punto
             }
         }
 
+        // --- Ordine delle schermate nel carousel (per calcolare la direzione di scorrimento) ---
+        const screenOrder = ["welcomeScreen", "starterDrawScreen", "drawScreen", "coopScreen", "finalScreen", "winnerScreen"];
+
         function switchScreen(screenId) {
-            document.querySelectorAll('.game-screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(screenId).classList.add('active');
+            const track = document.getElementById('screensTrack');
+            const allScreens = document.querySelectorAll('.game-screen');
+            const targetIndex = screenOrder.indexOf(screenId);
+
+            allScreens.forEach(s => s.classList.remove('active'));
+            const targetEl = document.getElementById(screenId);
+            targetEl.classList.add('active');
+
+            // Sistema a scorrimento orizzontale: sposta il track in base alla posizione della schermata target
+            if (targetIndex >= 0) {
+                track.style.transform = `translateX(-${targetIndex * 100}%)`;
+            }
 
             const drawControls = document.getElementById('drawControls');
             if (screenId === 'drawScreen') {
@@ -1476,6 +1809,9 @@
             } else {
                 drawControls.classList.remove('active');
             }
+
+            gameState.currentScreen = screenId;
+            saveState();
         }
 
         function confirmReset() {
@@ -1525,11 +1861,16 @@
             document.getElementById('setupContainer').style.display = 'flex';
             document.getElementById('globalResetBtn').style.display = 'inline-block';
 
+            clearSavedState();
+            document.getElementById('resumeBanner').classList.remove('active');
+
             updateNames();
             switchScreen('welcomeScreen');
         }
 
         updateNames();
+        checkForSavedGame();
+        switchScreen('welcomeScreen');
     </script>
 </body>
 </html>
