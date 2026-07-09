@@ -137,6 +137,56 @@
             margin: 0;
         }
 
+        /* Riepilogo giocatori bloccato (mostrato una volta avviata la partita) */
+        .player-badges {
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding: 14px 20px;
+            border-radius: 16px;
+            background: rgba(212, 163, 115, 0.06);
+            border: 1px solid rgba(212, 163, 115, 0.28);
+        }
+
+        .player-badges.active {
+            display: flex;
+        }
+
+        .player-badge {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .player-badge.badge-right {
+            align-items: flex-end;
+        }
+
+        .player-badge-name {
+            font-family: 'Cormorant Garamond', 'Playfair Display', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            letter-spacing: 0.5px;
+        }
+
+        .player-badge-gender {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-top: 3px;
+        }
+
+        .player-badge-divider {
+            width: 1px;
+            align-self: stretch;
+            background: rgba(212, 163, 115, 0.25);
+        }
+
         .status-bar {
             display: flex;
             justify-content: space-between;
@@ -169,6 +219,7 @@
             position: relative;
             overflow: hidden;
             width: 100%;
+            transition: height 0.32s ease;
         }
 
         .screens-track {
@@ -255,14 +306,14 @@
             background: rgba(255,255,255,0.02);
             border: 1px dashed rgba(212, 163, 115, 0.3);
             border-radius: 16px;
-            padding: 30px 20px;
-            margin: 20px 0;
+            padding: 22px 20px;
+            margin: 12px 0;
             font-family: 'Cormorant Garamond', serif;
             font-size: 1.45rem;
             font-weight: 600;
             letter-spacing: 1.5px;
             line-height: 1.4;
-            min-height: 100px;
+            min-height: 76px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -381,8 +432,8 @@
 
         /* Bonus box */
         .bonus-box {
-            margin-top: 12px;
-            padding: 12px;
+            margin-top: 10px;
+            padding: 10px 12px;
             border-radius: 12px;
             font-size: 0.95rem;
             border: 1px solid var(--bonus-color);
@@ -432,8 +483,8 @@
 
         /* Fase Evento: modificatore di gameplay attivo per 2 pescate */
         .phase-event-box {
-            margin-bottom: 18px;
-            padding: 14px 16px;
+            margin-bottom: 12px;
+            padding: 10px 14px;
             border-radius: 16px;
             border: 1.5px solid #ffd700;
             background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(114,60,90,0.15));
@@ -518,8 +569,8 @@
 
         /* Timer Globale (Mini UI) */
         .global-timer-container {
-            margin-top: 25px;
-            padding-top: 15px;
+            margin-top: 14px;
+            padding-top: 10px;
             border-top: 1px solid rgba(255,255,255,0.05);
             display: none;
             flex-direction: column;
@@ -608,8 +659,8 @@
 
         .draw-controls {
             display: none;
-            margin-top: 25px;
-            padding-top: 15px;
+            margin-top: 14px;
+            padding-top: 10px;
             border-top: 1px solid rgba(255,255,255,0.05);
         }
 
@@ -706,6 +757,18 @@
                     <label><input type="radio" name="p2Gender" value="donna" onchange="updateNames()"> Donna</label>
                     <label><input type="radio" name="p2Gender" value="uomo" checked onchange="updateNames()"> Uomo</label>
                 </div>
+            </div>
+        </div>
+
+        <div class="player-badges" id="playerBadges">
+            <div class="player-badge">
+                <div class="player-badge-name" id="badgeP1Name">Giocatore 1</div>
+                <div class="player-badge-gender" id="badgeP1Gender">Donna</div>
+            </div>
+            <div class="player-badge-divider"></div>
+            <div class="player-badge badge-right">
+                <div class="player-badge-name" id="badgeP2Name">Giocatore 2</div>
+                <div class="player-badge-gender" id="badgeP2Gender">Uomo</div>
             </div>
         </div>
 
@@ -1035,6 +1098,9 @@
             document.querySelector(`input[name="p2Gender"][value="${gameState.genders[2]}"]`).checked = true;
             updateNames();
 
+            // Una partita ripresa è per definizione già iniziata: nomi/sesso restano bloccati
+            lockPlayerSetup();
+
             // Ripristina UI in base alla schermata salvata
             document.getElementById('phaseIndicator').textContent = `Fase: ${gameState.phase}`;
             document.getElementById('remDrawsIndicator').textContent = `Pescate rimaste: ${gameState.drawsLeft}`;
@@ -1097,6 +1163,7 @@
             document.querySelectorAll('.p1Label').forEach(el => el.textContent = gameState.names[1]);
             document.querySelectorAll('.p2Label').forEach(el => el.textContent = gameState.names[2]);
             updateTurnIndicator();
+            updatePlayerBadges();
             saveState();
         }
 
@@ -1104,9 +1171,32 @@
             document.getElementById('turnIndicator').textContent = `Turno di: ${gameState.names[gameState.currentPlayer]}`;
         }
 
+        // --- Riepilogo giocatori bloccato: aggiorna il testo dei badge con nome + sesso scelto ---
+        function updatePlayerBadges() {
+            document.getElementById('badgeP1Name').textContent = gameState.names[1];
+            document.getElementById('badgeP2Name').textContent = gameState.names[2];
+            document.getElementById('badgeP1Gender').textContent = gameState.genders[1] === 'uomo' ? 'Uomo' : 'Donna';
+            document.getElementById('badgeP2Gender').textContent = gameState.genders[2] === 'uomo' ? 'Uomo' : 'Donna';
+        }
+
+        // Blocca nome/sesso una volta avviata la partita: nasconde i campi editabili
+        // e mostra al loro posto il riepilogo (badge) in sola lettura, sempre visibile.
+        function lockPlayerSetup() {
+            updatePlayerBadges();
+            document.getElementById('setupContainer').style.display = 'none';
+            document.getElementById('playerBadges').classList.add('active');
+        }
+
+        // Sblocca i campi editabili (usato quando si azzera/ricomincia la partita)
+        function unlockPlayerSetup() {
+            document.getElementById('playerBadges').classList.remove('active');
+            document.getElementById('setupContainer').style.display = 'flex';
+        }
+
         // --- Welcome screen: procedi al sorteggio ---
         function goToStarterDraw() {
             updateNames(); // assicura che i nomi siano aggiornati prima del sorteggio
+            lockPlayerSetup(); // da qui in poi nome e sesso non sono più modificabili
             startPhaseDraw();
         }
 
@@ -1789,6 +1879,31 @@
         // --- Ordine delle schermate nel carousel (per calcolare la direzione di scorrimento) ---
         const screenOrder = ["welcomeScreen", "starterDrawScreen", "drawScreen", "coopScreen", "finalScreen", "winnerScreen"];
 
+        // Il carousel affianca tutte le schermate in orizzontale: senza questo accorgimento,
+        // il contenitore prenderebbe sempre l'altezza della schermata più alta (es. finalScreen),
+        // lasciando spazio vuoto sotto le schermate più corte (es. drawScreen).
+        // Un ResizeObserver tiene l'altezza del viewport agganciata SOLO alla schermata attiva,
+        // così si adatta automaticamente anche quando il suo contenuto cambia (bonus, eventi, ecc.)
+        let screenResizeObserver = null;
+
+        function fitViewportToScreen(screenEl) {
+            const viewport = document.querySelector('.screens-viewport');
+            if (viewport && screenEl) {
+                viewport.style.height = screenEl.offsetHeight + 'px';
+            }
+        }
+
+        function observeActiveScreenHeight(screenEl) {
+            if (screenResizeObserver) {
+                screenResizeObserver.disconnect();
+            }
+            fitViewportToScreen(screenEl);
+            if ('ResizeObserver' in window) {
+                screenResizeObserver = new ResizeObserver(() => fitViewportToScreen(screenEl));
+                screenResizeObserver.observe(screenEl);
+            }
+        }
+
         function switchScreen(screenId) {
             const track = document.getElementById('screensTrack');
             const allScreens = document.querySelectorAll('.game-screen');
@@ -1802,6 +1917,9 @@
             if (targetIndex >= 0) {
                 track.style.transform = `translateX(-${targetIndex * 100}%)`;
             }
+
+            // Adatta l'altezza del viewport al contenuto reale della schermata attiva
+            observeActiveScreenHeight(targetEl);
 
             const drawControls = document.getElementById('drawControls');
             if (screenId === 'drawScreen') {
@@ -1858,7 +1976,8 @@
             document.getElementById('dice2').textContent = "?";
             updateFinalActivityText();
 
-            document.getElementById('setupContainer').style.display = 'flex';
+            // Ricomincia da capo: sblocca nome/sesso per una nuova eventuale modifica
+            unlockPlayerSetup();
             document.getElementById('globalResetBtn').style.display = 'inline-block';
 
             clearSavedState();
